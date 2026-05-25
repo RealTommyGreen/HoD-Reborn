@@ -168,3 +168,85 @@
 4. Gamepad-Default anpassen
 5. Cheat-System integrieren (God Mode, Infinite Ammo, Level/Checkpoint)
 6. BS-spezifische Features entfernen (Inventory, Music/SoundFont, Widescreen)
+
+---
+
+## 2026-05-25: Phase 4 Complete
+
+### Phase 4: Touch-Overlay, Controller und Cheats an HoD anpassen
+
+**Aktionen:**
+
+1. **Worktree-Branch `hod-android-phase3` gemerged:**
+   - 4 Dateien mit BS-Referenz-Fixes aus letzter Session:
+     `TouchButtonModels.kt`, `TouchButtonPresets.kt`, `TouchOverlayController.kt`, `TouchOverlaySettingsDialog.kt`
+   - 17 Zeilen geaendert (BS-Labels/Cheats)
+   - Worktree nach Merge geloescht
+
+2. **BS-spezifische Features aus TouchOverlayConfig entfernt:**
+   - `touchInventoryEnabled`-Feld entfernt (HoD hat kein Inventory)
+   - `screenMode`-Feld + `SCREEN_MODE_4_3`/`SCREEN_MODE_16_9_STRETCHED`-Konstanten entfernt (HoD kein Widescreen-Toggle)
+   - Config-Schema-Version: 8 → 9
+
+3. **TouchOverlayController.kt bereinigt:**
+   - `nativeSetScreenMode()`-Aufruf in `attach()` entfernt
+   - `nativeSetTouchInventoryEnabled()`-Aufruf in `onConfigUpdated()` entfernt
+
+4. **TouchOverlaySettingsDialog.kt bereinigt:**
+   - Touch-Inventory-Checkbox entfernt
+   - Screen-Mode-Sektion (Spinner, 4:3/16:9) komplett entfernt
+   - Ungenutzte Imports (Spinner, ArrayAdapter) entfernt
+   - Close-Button-Logik vereinfacht (kein screenMode-Sync mehr)
+
+5. **TouchInputDispatcher.kt bereinigt:**
+   - `contextualKeyCode()`-Methode entfernt (reine BS-Inventory-Kontextlogik)
+   - `heldContextualButtonKeys`-Map entfernt
+   - Context-Konstanten (TOUCH_CONTEXT_GAMEPLAY/CONFIRM/MENU) entfernt
+   - `HodActivity`-Import entfernt
+
+6. **HodActivity.kt bereinigt:**
+   - `nativeSetTouchInventoryEnabled()` extern-Funktion entfernt
+   - `nativeGetTouchInputContext()` extern-Funktion entfernt
+   - `nativeSetScreenMode()` extern-Funktion entfernt
+   - `nativeSetTouchInventoryEnabled()` Aufruf in `onCreate()` entfernt
+
+7. **Default-Overlay auf HoD reduziert (von 10 auf 6 Buttons):**
+   - Entfernt: btn_inv (Inventory), btn_status (Status), btn_quick_save, btn_quick_load
+   - Behalten: btn_menu (ESCAPE, top-left), dpad (left, bottom-anchored), btn_run (SHIFT), btn_jump (UP), btn_weapon (SPACE, Label="Shoot"), btn_use (ENTER)
+   - Layout: D-Pad links unten, Action-Buttons rechts (Run, Jump, Shoot, Use)
+
+8. **Gamepad-Default-Mapping auf HoD reduziert:**
+   - Default: A=Jump, X=Run, B=Shoot, Y=Use, START=Menu
+   - Entfernt: inventory, quick_load, quick_save, status
+   - Actions-Liste: von 9 auf 5 reduziert
+   - Buttons-Liste: von 9 auf 5 reduziert (SELECT, L1, R1, L3 entfernt)
+
+9. **Presets und Store aktualisiert:**
+   - "Weapon"-Label → "Shoot" in Presets und Store-Migration
+   - Presets (Inventory, Quick-Save/Load, Status) bleiben als Option fuer manuelle Button-Erstellung
+
+**Files geaendert (8):**
+- `touch/TouchButtonModels.kt` — BS-Felder entfernt, Default-Overlay+Gamepad reduziert, v9
+- `touch/TouchButtonPresets.kt` — "Weapon"→"Shoot"
+- `touch/TouchOverlayController.kt` — screenMode/touchInventory-Sync entfernt
+- `touch/TouchOverlaySettingsDialog.kt` — Inventory-Checkbox, Screen-Mode-Sektion entfernt
+- `touch/TouchInputDispatcher.kt` — contextualKeyCode-Logik entfernt
+- `touch/TouchButtonStore.kt` — Migrations-Label "Weapon"→"Shoot"
+- `HodActivity.kt` — 3 BS-JNI-Deklarationen entfernt
+- `ANDROID_PORT_PLAN.md` — Phase 4 Status
+
+**Review-Ergebnisse:**
+- grep "bermuda\|Bermuda\|BSNative" in java/: 0 Treffer ✅
+- grep "touchInventory\|screenMode\|SCREEN_MODE\|nativeSetScreenMode\|nativeSetTouchInventory\|nativeGetTouchInput" in java/: 0 Treffer (nur SDLActivity.java FullscreenMode, das ist SDL-Library) ✅
+- Cheats: 3 UI-Cheats (0-2) korrekt auf 6 native Cheats gemappt ✅
+- Default-Overlay 6 Buttons statt 10 ✅
+- Gamepad 5 Aktionen statt 9 ✅
+- Keine orphaned Kotlin-Referenzen auf entfernte JNI-Funktionen ✅
+
+**Naechste Schritte (Phase 5):**
+1. Manifest landscape/fullscreen, Touchscreen/Gamepad optional ✅ (bereits in Phase 1)
+2. minSdk=24, targetSdk=35, compileSdk=35, ndkVersion=27.2.12479018 ✅ (bereits in Phase 1)
+3. Release-Signing nicht von BS uebernehmen ✅ (kein Keystore kopiert)
+4. App darf ohne Import nicht crashen
+5. JNI-Stubs in android_main.cpp endgueltig aufraeumen (nativeSetScreenMode, nativeSetTouchInventoryEnabled, nativeGetTouchInputContext)
+6. Finale Qualitaetspruefung aller Dateien

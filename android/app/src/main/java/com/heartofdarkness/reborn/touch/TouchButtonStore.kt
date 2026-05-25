@@ -70,7 +70,7 @@ class TouchButtonStore(private val filesDir: File) {
         val updatedButtons = config.buttons.map { button ->
             when (button.id) {
                 "btn_use" -> button.copy(label = "Use", icon = "use")
-                "btn_weapon" -> button.copy(label = "Weapon", icon = "weapon")
+                "btn_weapon" -> button.copy(label = "Shoot", icon = "weapon")
                 "btn_run" -> button.copy(label = "Run", icon = "run")
                 "btn_inv" -> button.copy(label = "Inventory", icon = "inventory")
                 "btn_status" -> button.copy(label = "Status", icon = "status")

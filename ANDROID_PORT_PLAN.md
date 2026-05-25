@@ -1,6 +1,6 @@
 # HoD Android Port Plan
 
-## Status: Phase 3 - Complete
+## Status: Phase 4 - Complete
 
 ## Phases
 
@@ -53,13 +53,25 @@ JNI-Bridge komplett auf HoD-Package umgestellt. BS-spezifische JNI-Funktionen (S
 **Offene Risiken:**
 - `launcher_background.png` ist ein generisches Platzhalter-Background (kein offizielles Artwork) → kann spaeter durch echtes Artwork ersetzt werden
 
-### Phase 4: Touch-Overlay, Controller und Cheats an HoD anpassen
-- [ ] Overlay-Dateien aus BS uebernehmen, Branding auf HoD
-- [ ] Default Overlay: D-Pad links, Run/Jump/Shoot/Shoot+Run rechts, Menu/Esc
-- [ ] Key-Mapping auf HoD-SDL-Mappings
-- [ ] Gamepad-Default anpassen
-- [ ] Cheat-System integrieren (God Mode, Infinite Ammo, Level/Checkpoint)
-- [ ] BS-spezifische Features entfernen (Inventory, Music/SoundFont, Widescreen)
+### Phase 4: Touch-Overlay, Controller und Cheats an HoD anpassen ✅
+- [x] Overlay-Dateien aus BS uebernehmen, Branding auf HoD (13 Dateien im touch/ Package, alle HoD-Package)
+- [x] Default Overlay: D-Pad links, Run/Jump/Shoot/Use rechts, Menu/Esc
+- [x] Key-Mapping auf HoD-SDL-Mappings (SHIFT=Run, UP=Jump, SPACE=Shoot, ENTER=Use, ESCAPE=Menu)
+- [x] Gamepad-Default: A=Jump, X=Run, B=Shoot, Y=Use, START=Menu (Inventory/Quick-Save/Load entfernt)
+- [x] Cheat-System: 3 HoD-Cheats (SpectreFireballNoHit, OneHitPlasmaCannon, WalkOnLava), 6 im Native
+- [x] BS-spezifische Features entfernt: touchInventory, screenMode, Widescreen-Toggle, contextualKeyCodes
+
+**Ergebnisse:** Alle 13 touch/-Dateien sind auf HoD-Package. BS-spezifische Features (Inventory, Screen-Mode,
+Widescreen, contextualKeyCodes) vollständig aus Kotlin entfernt. `nativeSetTouchInventoryEnabled` und
+`nativeGetTouchInputContext` aus Kotlin entfernt (JNI-Stubs bleiben im Native für Binärkompatibilität).
+`nativeSetScreenMode` aus Kotlin entfernt. `TouchOverlayConfig`-Schema auf v9 inkrementiert.
+
+Default-Overlay auf 6 Buttons reduziert: Menu, D-Pad, Run, Jump, Shoot, Use (vorher 10 mit Inventory,
+Status, Quick-Save/Load). Gamepad-Mapping auf 5 Aktionen reduziert.
+
+**Offene Risiken:**
+- JNI-Stubs (nativeSetScreenMode, nativeSetTouchInventoryEnabled, nativeGetTouchInputContext) sind
+  noch in android_main.cpp — Phase 5 kann sie endgültig entfernen
 
 ### Phase 5: Android-Qualitaet und Buildbarkeit
 - [ ] Manifest landscape/fullscreen, Touchscreen/Gamepad optional ✅ (bereits in Phase 1)

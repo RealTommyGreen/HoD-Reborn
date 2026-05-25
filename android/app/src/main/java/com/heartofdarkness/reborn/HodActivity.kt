@@ -22,16 +22,8 @@ class HodActivity : SDLActivity() {
         external fun nativeSetCheat(cheatId: Int, enabled: Boolean)
 
         @JvmStatic
-        external fun nativeSetScreenMode(mode: Int)
-
-        @JvmStatic
         external fun nativeSetControllerConfig(enabled: Boolean, mapping: String, dpadDoubleTapRunEnabled: Boolean)
 
-        @JvmStatic
-        external fun nativeSetTouchInventoryEnabled(enabled: Boolean)
-
-        @JvmStatic
-        external fun nativeGetTouchInputContext(): Int
     }
 
     private var touchOverlayController: TouchOverlayController? = null
@@ -50,7 +42,6 @@ class HodActivity : SDLActivity() {
         val touchConfig = touchStore.loadOrDefault()
         Log.i(TAG, "Controller config loaded, mapping: $mappingJson, dpadRun=${touchConfig.dpadDoubleTapRunEnabled}")
         nativeSetControllerConfig(controllerEnabled, mappingJson, touchConfig.dpadDoubleTapRunEnabled)
-        nativeSetTouchInventoryEnabled(touchConfig.touchInventoryEnabled)
 
         if (!TOUCH_OVERLAY_ENABLED) {
             Log.i(TAG, "Touch overlay disabled for startup crash isolation")

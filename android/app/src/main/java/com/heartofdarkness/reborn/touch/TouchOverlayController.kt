@@ -41,11 +41,10 @@ class TouchOverlayController(
         config = store.loadOrDefault()
         config = config!!.copy(layoutLocked = true)
 
-        // Sync persisted cheats and screen mode to native on startup
+        // Sync persisted cheats to native on startup
         HodActivity.nativeSetCheat(0, config!!.cheatSpectreFireballNoHit)
         HodActivity.nativeSetCheat(1, config!!.cheatOneHitPlasmaCannon)
         HodActivity.nativeSetCheat(2, config!!.cheatWalkOnLava)
-        HodActivity.nativeSetScreenMode(config!!.screenMode)
 
         val container = FrameLayout(activity).apply {
             isClickable = false; isFocusable = false
@@ -250,7 +249,6 @@ class TouchOverlayController(
     private fun onConfigUpdated(updated: TouchOverlayConfig) {
         config = updated
         saveConfig()
-        HodActivity.nativeSetTouchInventoryEnabled(updated.touchInventoryEnabled)
         syncGlobalConfigToButtonViews()
         if (controllerEnabled && controllerConfig != null) {
             val mappingJson = Json.encodeToString(controllerConfig!!.mapping)

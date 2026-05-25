@@ -7,15 +7,13 @@ import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
 import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
-import com.heartofdarkness.reborn.HodActivity
 import com.heartofdarkness.reborn.ControllerDeviceDetector
+import com.heartofdarkness.reborn.HodActivity
 
 class TouchOverlaySettingsDialog(
     private val context: Context,
@@ -63,30 +61,8 @@ class TouchOverlaySettingsDialog(
             currentConfig = currentConfig.copy(dpadDoubleTapRunEnabled = it)
             onConfigChanged(currentConfig)
         }
-        val touchInventoryCheckBox = checkBox("Touch Inventory", currentConfig.touchInventoryEnabled) {
-            currentConfig = currentConfig.copy(touchInventoryEnabled = it)
-            onConfigChanged(currentConfig)
-        }
         container.addView(sectionLabel("D-Pad"))
         container.addView(dpadRunCheckBox)
-        container.addView(touchInventoryCheckBox)
-
-        // --- Screen Mode ---
-        container.addView(separator())
-        val screenModes = listOf("4:3 Aspect Correct", "16:9 Stretched (Gameplay)")
-        val screenModeSpinner = Spinner(context).apply {
-            adapter = object : ArrayAdapter<String>(context, android.R.layout.simple_spinner_item, screenModes) {
-                override fun getView(pos: Int, cv: View?, parent: ViewGroup) =
-                    (super.getView(pos, cv, parent) as TextView).apply { setTextColor(TEXT); textSize = 14f }
-                override fun getDropDownView(pos: Int, cv: View?, parent: ViewGroup) =
-                    (super.getDropDownView(pos, cv, parent) as TextView).apply { setTextColor(TEXT); textSize = 14f; setBackgroundColor(0xFF111820.toInt()) }
-            }
-            setSelection(currentConfig.screenMode.coerceIn(0, 1))
-            background = fieldBackground()
-            setPopupBackgroundDrawable(GradientDrawable().apply { shape = GradientDrawable.RECTANGLE; setColor(0xFF111820.toInt()); setStroke(1.dp, SURFACE_STROKE) })
-        }
-        container.addView(sectionLabel("Screen Mode"))
-        container.addView(screenModeSpinner)
 
         // --- Cheats ---
         container.addView(separator())
@@ -120,10 +96,7 @@ class TouchOverlaySettingsDialog(
         val dialog = AlertDialog.Builder(context)
             .setView(scrollView)
             .setPositiveButton("Close") { _, _ ->
-                val selectedMode = screenModeSpinner.selectedItemPosition.coerceIn(0, 1)
-                currentConfig = currentConfig.copy(screenMode = selectedMode)
                 onConfigChanged(currentConfig)
-                HodActivity.nativeSetScreenMode(selectedMode)
             }
             .create()
 

@@ -23,7 +23,7 @@ val TOUCH_BUTTON_PRESETS: List<TouchButtonPreset> = listOf(
 
     // HoD keys
     keyPreset("use", "Use", "use", "ENTER", "Actions"),
-    keyPreset("weapon", "Weapon", "weapon", "SPACE", "Actions"),
+    keyPreset("weapon", "Shoot", "weapon", "SPACE", "Actions"),
     keyPreset("run", "Run/Holster", "run", "SHIFT", "Actions", mode = "hold"),
     keyPreset("inventory", "Inventory", "inventory", "TAB", "UI"),
     keyPreset("status", "Status", "status", "CTRL", "UI", mode = "hold"),
