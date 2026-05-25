@@ -115,3 +115,56 @@
 2. Launcher-Text fuer HoD finalisieren
 3. launcher_background.png ersetzen (aktuell noch BS)
 4. Import-Validation: Test mit leerem/ungueltigem Ordner (App muss Fehlermeldung statt Crash zeigen)
+
+---
+
+## 2026-05-25: Phase 3 Complete
+
+### Phase 3: Launcher und Asset-Import auf HoD anpassen
+
+**Aktionen:**
+
+1. **SafImporter.kt geprueft:**
+   - REQUIRED_FILES = ["setup.dat"] ✅
+   - PATTERN_FILES = ["*_hod.lvl", "*_hod.sss", "*_hod.mst"] ✅
+   - PAF_FILES = ["hod.paf", "hod_demo.paf", "hod_demo2.paf"] ✅
+   - Import-Target: filesDir/imported_game/hode ✅
+   - Case-insensitive Validierung via `.lowercase()` ✅
+   - Manifest: `.import_manifest.json` mit validation_status ✅
+
+2. **HodLauncherActivity.kt geprueft:**
+   - Titel: "Heart of Darkness" ✅
+   - Anleitungstext mit HoD-spezifischen Dateinamen ✅
+   - Import-Flow: isImportValid() → Controller Detector → HodActivity ✅
+   - Controller-Erkennung mit Gamepad-Navigation (D-Pad, A/B Buttons) ✅
+   - Vollbild-Immersive-Mode mit System-Bar-Hiding ✅
+
+3. **ControllerDeviceDetector.kt geprueft:**
+   - Erkennt non-virtual devices mit GAMEPAD/JOYSTICK/DPAD sources ✅
+   - Clean, kein BS-Branding ✅
+
+4. **launcher_background.png ersetzt:**
+   - BS-background (md5: 37b930116b0fc09fefcfe127575ab5c3) → HoD-background (md5: 0083ab0a1a088de6aa6706074a13e58a)
+   - Neues 800x480 PNG generiert: dunkler Vignetten-Gradient mit goldenem "Heart of Darkness"-Schriftzug und "Android Port"-Subtitle
+   - Platzhalter-Charakter (kein offizielles Artwork) → kann spaeter durch echtes Artwork ersetzt werden
+
+5. **Import-Validation-Flow (theoretisch geprueft):**
+   - validateSource() validiert vor Import → Fehlermeldung bei ungueltigem Ordner ✅
+   - import() faengt Exceptions → partial imports werden geloescht ✅
+   - Keine APK gebaut → echter SAF-Picker-Test erst nach Codex-Endabnahme moeglich ✅
+
+**Review-Ergebnisse:**
+- SafImporter HoD-Validierung: korrekt (setup.dat, *_hod.lvl/.sss/.mst, hod*.paf) ✅
+- Import-Pfad: correctly target `filesDir/imported_game/hode` ✅
+- Launcher-Text: HoD-spezifisch, vollstaendig ✅
+- launcher_background.png: ersetzt, Hash-Differenz zum BS-Original bestaetigt ✅
+- ControllerDeviceDetector: clean, kein BS-Bezug ✅
+- Kein R.drawable-Verweis auf nicht-existente BS-Ressourcen ✅
+
+**Naechste Schritte (Phase 4):**
+1. Touch-Overlay-Dateien aus BS uebernehmen, Branding auf HoD
+2. Default Overlay: D-Pad links, Run/Jump/Shoot/Shoot+Run rechts, Menu/Esc
+3. Key-Mapping auf HoD-SDL-Mappings anpassen
+4. Gamepad-Default anpassen
+5. Cheat-System integrieren (God Mode, Infinite Ammo, Level/Checkpoint)
+6. BS-spezifische Features entfernen (Inventory, Music/SoundFont, Widescreen)

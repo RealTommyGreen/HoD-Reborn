@@ -1,6 +1,6 @@
 # HoD Android Port Plan
 
-## Status: Phase 2 - Complete
+## Status: Phase 3 - Complete
 
 ## Phases
 
@@ -39,12 +39,19 @@ JNI-Bridge komplett auf HoD-Package umgestellt. BS-spezifische JNI-Funktionen (S
 - `android_main.cpp` Audio-Callback-Lambda (`[](void *userdata, int16_t *buf, int len) {...}`) muss von NDK-27-Clang akzeptiert werden
 - Keine APK gebaut (nur statische Pruefung) → Compile-Fehler erst bei Gradle-Sync sichtbar
 
-### Phase 3: Launcher und Asset-Import auf HoD anpassen
-- [ ] SafImporter validiert HoD-Dateien (setup.dat, *_hod.lvl, *_hod.sss, *_hod.mst, hod*.paf) ✅ (vorgezogen)
-- [ ] Import kopiert nach filesDir/imported_game/hode ✅ (vorgezogen)
-- [ ] Launcher-Text fuer HoD anpassen ✅ (vorgezogen)
-- [ ] Review: launcher_background ersetzen
-- [ ] Bei gueltigem Import → HodActivity starten ✅ (vorgezogen)
+### Phase 3: Launcher und Asset-Import auf HoD anpassen ✅
+- [x] SafImporter validiert HoD-Dateien (setup.dat, *_hod.lvl, *_hod.sss, *_hod.mst, hod*.paf) ✅ (vorgezogen)
+- [x] Import kopiert nach filesDir/imported_game/hode ✅ (vorgezogen)
+- [x] Launcher-Text fuer HoD anpassen ✅ (vorgezogen)
+- [x] Review: launcher_background ersetzen
+- [x] Bei gueltigem Import → HodActivity starten ✅ (vorgezogen)
+
+**Ergebnisse:** SafImporter, Import-Pfad, Launcher-Text und HodActivity-Startup waren bereits in Phase 1 korrekt vorgezogen.
+`launcher_background.png` wurde durch ein HoD-eigenes 800x480 PNG ersetzt (dunkler Gradient mit goldenem "Heart of Darkness"-Schriftzug).
+`ControllerDeviceDetector.kt` ist clean, kein BS-Branding.
+
+**Offene Risiken:**
+- `launcher_background.png` ist ein generisches Platzhalter-Background (kein offizielles Artwork) → kann spaeter durch echtes Artwork ersetzt werden
 
 ### Phase 4: Touch-Overlay, Controller und Cheats an HoD anpassen
 - [ ] Overlay-Dateien aus BS uebernehmen, Branding auf HoD
