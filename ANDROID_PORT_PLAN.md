@@ -84,3 +84,4 @@ Status, Quick-Save/Load). Gamepad-Mapping auf 5 Aktionen reduziert.
 - `D:\Coding\BS Android` nur lesen
 - Keine APK vor Codex-Endabnahme bauen
 - Nach jeder Phase: Review, Log-Update, dann Stopp
+- **Worktrees:** Falls ein `EnterWorktree` genutzt wird, muss der Worktree-Pfad (`.claude/worktrees/<name>`) und Branch in Log UND Plan dokumentiert werden. Nach Merge den Worktree mit `git worktree remove` aufraeumen und im Log vermerken.
