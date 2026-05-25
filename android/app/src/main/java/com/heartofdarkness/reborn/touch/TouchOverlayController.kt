@@ -42,9 +42,9 @@ class TouchOverlayController(
         config = config!!.copy(layoutLocked = true)
 
         // Sync persisted cheats and screen mode to native on startup
-        HodActivity.nativeSetCheat(0, config!!.cheatGodMode)
-        HodActivity.nativeSetCheat(1, config!!.cheatInfiniteAmmo)
-        HodActivity.nativeSetCheat(2, config!!.cheatAllWeapons)
+        HodActivity.nativeSetCheat(0, config!!.cheatSpectreFireballNoHit)
+        HodActivity.nativeSetCheat(1, config!!.cheatOneHitPlasmaCannon)
+        HodActivity.nativeSetCheat(2, config!!.cheatWalkOnLava)
         HodActivity.nativeSetScreenMode(config!!.screenMode)
 
         val container = FrameLayout(activity).apply {

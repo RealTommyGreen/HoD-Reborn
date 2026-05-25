@@ -16,9 +16,9 @@ data class TouchOverlayConfig(
     @SerialName("layout_locked") val layoutLocked: Boolean = true,
     val buttons: List<TouchButtonConfig> = emptyList(),
     @SerialName("dpad_double_tap_run_enabled") val dpadDoubleTapRunEnabled: Boolean = true,
-    @SerialName("cheat_god_mode") val cheatGodMode: Boolean = false,
-    @SerialName("cheat_infinite_ammo") val cheatInfiniteAmmo: Boolean = false,
-    @SerialName("cheat_all_weapons") val cheatAllWeapons: Boolean = false,
+    @SerialName("cheat_spectre_fireball_no_hit") val cheatSpectreFireballNoHit: Boolean = false,
+    @SerialName("cheat_one_hit_plasma_cannon") val cheatOneHitPlasmaCannon: Boolean = false,
+    @SerialName("cheat_walk_on_lava") val cheatWalkOnLava: Boolean = false,
     @SerialName("touch_inventory_enabled") val touchInventoryEnabled: Boolean = true,
     @SerialName("screen_mode") val screenMode: Int = SCREEN_MODE_4_3
 )
@@ -97,7 +97,7 @@ const val BUTTON_ANCHOR_END = "end"
 const val BUTTON_ANCHOR_TOP = "top"
 const val BUTTON_ANCHOR_BOTTOM = "bottom"
 
-// Bermuda default touch overlay layout, matched to the final 2400x1080 reference layout.
+// Default touch overlay layout.
 fun defaultButtons(): List<TouchButtonConfig> = listOf(
     // Left side
     TouchButtonConfig(id = "btn_menu", label = "Menu", icon = "menu", shape = BUTTON_SHAPE_CIRCLE,
