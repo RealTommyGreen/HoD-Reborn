@@ -21,7 +21,7 @@ val TOUCH_BUTTON_PRESETS: List<TouchButtonPreset> = listOf(
     mousePreset("mouse_left", "Left Click", "mouse_left", "left"),
     mousePreset("mouse_right", "Right Click", "mouse_right", "right"),
 
-    // Bermuda keys
+    // HoD keys
     keyPreset("use", "Use", "use", "ENTER", "Actions"),
     keyPreset("weapon", "Weapon", "weapon", "SPACE", "Actions"),
     keyPreset("run", "Run/Holster", "run", "SHIFT", "Actions", mode = "hold"),

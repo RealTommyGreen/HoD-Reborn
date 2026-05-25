@@ -90,25 +90,25 @@ class TouchOverlaySettingsDialog(
 
         // --- Cheats ---
         container.addView(separator())
-        val godModeCheckBox = checkBox("God Mode / No Hit", currentConfig.cheatGodMode) {
-            currentConfig = currentConfig.copy(cheatGodMode = it)
+        val spectreFireballCheckBox = checkBox("Spectre Fireball No-Hit", currentConfig.cheatSpectreFireballNoHit) {
+            currentConfig = currentConfig.copy(cheatSpectreFireballNoHit = it)
             onConfigChanged(currentConfig)
             HodActivity.nativeSetCheat(0, it)
         }
-        val infiniteAmmoCheckBox = checkBox("Infinite Ammo", currentConfig.cheatInfiniteAmmo) {
-            currentConfig = currentConfig.copy(cheatInfiniteAmmo = it)
+        val oneHitPlasmaCheckBox = checkBox("One-Hit Plasma Cannon", currentConfig.cheatOneHitPlasmaCannon) {
+            currentConfig = currentConfig.copy(cheatOneHitPlasmaCannon = it)
             onConfigChanged(currentConfig)
             HodActivity.nativeSetCheat(1, it)
         }
-        val allWeaponsCheckBox = checkBox("All Weapons", currentConfig.cheatAllWeapons) {
-            currentConfig = currentConfig.copy(cheatAllWeapons = it)
+        val walkOnLavaCheckBox = checkBox("Walk on Lava", currentConfig.cheatWalkOnLava) {
+            currentConfig = currentConfig.copy(cheatWalkOnLava = it)
             onConfigChanged(currentConfig)
             HodActivity.nativeSetCheat(2, it)
         }
         container.addView(sectionLabel("Cheats (v1)"))
-        container.addView(godModeCheckBox)
-        container.addView(infiniteAmmoCheckBox)
-        container.addView(allWeaponsCheckBox)
+        container.addView(spectreFireballCheckBox)
+        container.addView(oneHitPlasmaCheckBox)
+        container.addView(walkOnLavaCheckBox)
 
         // --- Layout ---
         container.addView(separator())
