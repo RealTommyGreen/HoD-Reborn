@@ -23,7 +23,7 @@ Built on [hode](https://github.com/cyxx/hode) 0.2.9f — the incredible reverse-
 
 ## Download
 
-**Latest APK:** [HoD-Reborn-v1.0.0.apk](https://drive.google.com/file/d/1i1nOgttOCstF4ob5fTDkemYxnE8QMKmv/view?usp=drivesdk) (12.6 MB, arm64-v8a + armeabi-v7a + x86_64)
+**Latest APK:** [HoD-Reborn-v1.0.0.apk](https://drive.google.com/uc?export=download&id=1zqJzOyDKgq3rETO4khkpfA1HvBn0i2g9) (13 MB, arm64-v8a + armeabi-v7a + x86_64)
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
@@ -106,9 +106,9 @@ Touch overlay, SVG icon system, gamepad support, SAF import, and all Android-spe
 
 ## License
 
-This project is published for educational and preservation purposes. The Heart of Darkness game data files are copyrighted by Amazing Studio / Infogrames and are **not** included.
+See [LICENSE.md](LICENSE.md) for full details.
 
-See the upstream [hode](https://github.com/cyxx/hode) repository for engine licensing.
+This project is published for **educational and preservation purposes**. The core engine was reverse-engineered by Gregory Montoir (upstream archived, no known license). Android additions may be freely studied and modified for non-commercial use. The Heart of Darkness game data files are copyrighted by Amazing Studio / Infogrames and are **not** included.
 
 ---
 

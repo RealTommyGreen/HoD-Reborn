@@ -12,10 +12,12 @@ First stable release.
 - Package renamed from `com.heartofdarkness.reborn` to `com.hod.reborn`
 - Repository branches cleaned up: `main` tracks original hode engine, `reborn` contains all Android work
 - `.gitignore` added for build artifacts and keystore
+- `LICENSE.md` added (upstream hode engine has no known license; Android additions: educational/non-commercial)
 
 ### Release Build
 - Release signing configured via `hod-release.jks`
 - Signed release APK (13 MB, 3 ABIs: arm64-v8a, armeabi-v7a, x86_64)
+- Keystore security: passwords moved from hardcoded `build.gradle.kts` to env vars (`HOD_KEYSTORE_PASSWORD`, `HOD_KEY_PASSWORD`); new keystore generated with strong password (2026-06-14)
 
 ---
 
