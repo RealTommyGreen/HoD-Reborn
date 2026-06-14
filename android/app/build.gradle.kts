@@ -12,9 +12,9 @@ android {
     signingConfigs {
         create("release") {
             storeFile = file("hod-release.jks")
-            storePassword = "android"
+            storePassword = System.getenv("HOD_KEYSTORE_PASSWORD") ?: ""
             keyAlias = "hod"
-            keyPassword = "android"
+            keyPassword = System.getenv("HOD_KEY_PASSWORD") ?: ""
         }
     }
 

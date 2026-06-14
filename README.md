@@ -67,7 +67,10 @@ To build for debug (unsigned, faster):
 
 ### Signing
 
-Release builds require a keystore at `android/app/hod-release.jks`. Create your own or set up signing via `build.gradle.kts`.
+Release builds require a keystore at `android/app/hod-release.jks` and two environment variables:
+
+- `HOD_KEYSTORE_PASSWORD`
+- `HOD_KEY_PASSWORD`
 
 ## Architecture
 
