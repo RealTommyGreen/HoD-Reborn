@@ -1,4 +1,4 @@
-# Heart of Darkness Reborn
+# HoD Reborn
 
 Android port of the classic 1998 cinematic platformer **Heart of Darkness** by Amazing Studio.
 
