@@ -708,3 +708,37 @@
 ### SVG-Phasen alle abgeschlossen. Herz der Finsternis Android Port v0.1.0 ist fertig.
 
 ---
+
+## 2026-06-14: Package-Rename, Branch-Cleanup, Signing, Release-APK
+
+### Package-Rename: com.heartofdarkness.reborn → com.hod.reborn
+- Package-Pfad vereinfacht: `android/app/src/main/java/com/heartofdarkness/reborn/` → `com/hod/reborn/`
+- Alle 18 Kotlin-Dateien verschoben (Git erkannte Renames korrekt)
+- `HodActivity.kt`, `HodLauncherActivity.kt`, `SafImporter.kt`, `AssetExtractor.kt`, `ControllerDeviceDetector.kt`
+- `touch/` Paket: 13 Dateien (inkl. `SvgIconManager.kt`)
+- `HodLauncherActivity.kt` interner Package-Import auf `com.hod.reborn.R` aktualisiert
+
+### Branch-Struktur bereinigt
+- `main`-Branch war mit Android-Port vermischt → keine Trennung zur Original-Engine
+- Neuer `main`: zurueckgesetzt auf `abaa416` (letzter Pre-Android-Commit, Original-Engine)
+- Alter `main` umbenannt in `reborn` (b405cdb, enthaelt alle Android-Arbeiten Phasen 1-5 + SVG 1-5)
+- `.gitignore` auf `main` (nur `android/` ignoriert) und auf `reborn` (Build-Artefakte + Keystore ignoriert)
+- Keine Worktrees — beide Branches teilen Working Directory, sauberes `git checkout`
+
+### Release-Signing
+- Keystore `android/app/hod-release.jks` (vorhanden seit 2026-05-26)
+- `android/app/build.gradle.kts`: signingConfigs mit Keystore-Pfad, Alias `hod`, Passwoerter via Umgebungsvariablen
+- Signing nur im Release-Build aktiv (Debug nutzt weiterhin Android Debug Keystore)
+
+### Release-APK Build
+- `gradlew assembleRelease` → BUILD SUCCESSFUL in 4m 39s
+- APK: `app-release.apk` (13 MB), 3 ABIs (arm64-v8a, armeabi-v7a, x86_64)
+- GDrive-Upload: `HoD-Reborn-2026-06-14.apk`
+- Nur API-Deprecation-Warnings (FLAG_FULLSCREEN, systemUiVisibility) + C++ Unused-Variable-Warnings — keine Fehler
+
+### Files geaendert (ca. 20)
+- 18 Kotlin-Dateien: Package-Rename (verschoben)
+- `.gitignore` — Build-Artefakte + Keystore
+- `ANDROID_PORT_LOG.md` — Dieser Eintrag
+
+---
