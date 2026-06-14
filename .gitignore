@@ -1,0 +1,6 @@
+# Android build artifacts
+android/.gradle/
+android/app/.cxx/
+android/app/build/
+android/local.properties
+*.jks
