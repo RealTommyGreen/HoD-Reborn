@@ -1,4 +1,4 @@
-package com.heartofdarkness.reborn.touch
+package com.hod.reborn.touch
 
 import android.content.Context
 import android.graphics.Canvas

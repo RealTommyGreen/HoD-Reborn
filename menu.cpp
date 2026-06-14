@@ -8,6 +8,11 @@
 #include "util.h"
 #include "video.h"
 
+#ifdef __ANDROID__
+extern "C" bool Android_consumeMenuToggleRequest();
+extern "C" bool Android_isMenuOpenedFromGame();
+#endif
+
 enum {
 	kTitleScreen_AssignPlayer = 0,
 	kTitleScreen_Play = 1,
@@ -443,6 +448,9 @@ bool Menu::mainLoop() {
 			ret = handleOptions();
 			_g->resetSound();
 			_paf->setCallback(0);
+			if (!ret) {
+				continue;
+			}
 		} else if (option == kTitleScreen_Quit) {
 		}
 		break;
@@ -463,6 +471,19 @@ int Menu::handleTitleScreen() {
 	int currentOption = kTitleScreen_Play;
 	while (1) {
 		g_system->processEvents();
+#ifdef __ANDROID__
+		if (Android_consumeMenuToggleRequest()) {
+			if (Android_isMenuOpenedFromGame()) {
+				currentOption = kTitleScreen_Play;
+				break;
+			}
+			continue;
+		}
+		if (Android_isMenuOpenedFromGame() && g_system->inp.keyReleased(SYS_INP_SHOOT)) {
+			currentOption = kTitleScreen_Play;
+			break;
+		}
+#endif
 		if (g_system->inp.quit) {
 			currentOption = kTitleScreen_Quit;
 			break;
@@ -479,7 +500,7 @@ int Menu::handleTitleScreen() {
 				++currentOption;
 			}
 		}
-		if (g_system->inp.keyReleased(SYS_INP_SHOOT) || g_system->inp.keyReleased(SYS_INP_JUMP)) {
+		if (g_system->inp.keyReleased(SYS_INP_JUMP)) {
 			playSound(kSound_0x78);
 			break;
 		}
@@ -1668,13 +1689,12 @@ void Menu::handleLoadCutscene(int num) {
 
 static bool matchInput(uint8_t type, uint8_t mask, const PlayerInput &inp, uint8_t optionMask) {
 	if (type != 0) {
+#ifndef __ANDROID__
 		if ((mask & 1) != 0 && inp.keyReleased(SYS_INP_RUN)) {
 			return true;
 		}
+#endif
 		if ((mask & 2) != 0 && inp.keyReleased(SYS_INP_JUMP)) {
-			return true;
-		}
-		if ((mask & 4) != 0 && inp.keyReleased(SYS_INP_SHOOT)) {
 			return true;
 		}
 		if ((mask & optionMask) != 0) {
@@ -1726,10 +1746,15 @@ bool Menu::handleOptions() {
 	_condMask = 0;
 	while (1) {
 		g_system->processEvents();
+#ifdef __ANDROID__
+		if (Android_consumeMenuToggleRequest()) {
+			return Android_isMenuOpenedFromGame();
+		}
+#endif
 		if (g_system->inp.quit) {
 			break;
 		}
-		if (g_system->inp.keyPressed(SYS_INP_ESC)) {
+		if (g_system->inp.keyPressed(SYS_INP_ESC) || g_system->inp.keyReleased(SYS_INP_SHOOT)) {
 			_optionNum = -1;
 			break;
 		}

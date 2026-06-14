@@ -34,7 +34,7 @@ set(ENGINE_SOURCES
     "${ENGINE_ROOT}/level8_lar2.cpp"
     "${ENGINE_ROOT}/level9_dark.cpp"
     "${ENGINE_ROOT}/lzw.cpp"
-    "${ENGINE_ROOT}/main.cpp"
+    # main.cpp excluded (desktop entry point; Android uses android_main.cpp)
     "${ENGINE_ROOT}/mdec.cpp"
     "${ENGINE_ROOT}/menu.cpp"
     "${ENGINE_ROOT}/mixer.cpp"
@@ -72,7 +72,7 @@ target_include_directories(hode PRIVATE
 )
 
 target_compile_definitions(hode PRIVATE
-    ANDROID_PACKAGE_NAME="com.heartofdarkness.reborn"
+    ANDROID_PACKAGE_NAME="com.hod.reborn"
 )
 
 target_compile_options(hode PRIVATE

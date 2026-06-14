@@ -1,4 +1,4 @@
-package com.heartofdarkness.reborn.touch
+package com.hod.reborn.touch
 
 import android.content.Context
 import android.util.Log
@@ -25,13 +25,13 @@ class TouchButtonStore(private val filesDir: File) {
         return try {
             val raw = configFile.readText()
             val config = jsonFormat.decodeFromString<TouchOverlayConfig>(raw)
-            if (config.schemaVersion != TOUCH_OVERLAY_CONFIG_VERSION) {
+            val normalized = migrateConfig(config)
+            if (config.schemaVersion != TOUCH_OVERLAY_CONFIG_VERSION || normalized != config) {
                 Log.i(TAG, "Config version mismatch, migrating")
-                val normalized = migrateConfig(config)
                 save(normalized)
                 normalized
             } else {
-                config
+                normalized
             }
         } catch (e: SerializationException) {
             Log.w(TAG, "Corrupt config, loading defaults: ${e.message}")
@@ -67,17 +67,21 @@ class TouchButtonStore(private val filesDir: File) {
                 buttons = defaultButtons()
             )
         }
-        val updatedButtons = config.buttons.map { button ->
-            when (button.id) {
-                "btn_use" -> button.copy(label = "Use", icon = "use")
-                "btn_weapon" -> button.copy(label = "Shoot", icon = "weapon")
-                "btn_run" -> button.copy(label = "Run", icon = "run")
-                "btn_inv" -> button.copy(label = "Inventory", icon = "inventory")
-                "btn_status" -> button.copy(label = "Status", icon = "status")
-                "btn_menu" -> button.copy(label = "Menu", icon = "menu")
-                else -> button
-            }
-        }.toMutableList()
+        val updatedButtons = config.buttons
+            .filter { it.id != "btn_shoot_run" }
+            .map { button ->
+                when (button.id) {
+                    "btn_menu" -> button.copy(label = "Menu", icon = "menu", actions = listOf(TouchButtonAction(type = "native_menu", mode = "tap")))
+                    "btn_use" -> button.copy(label = "Shoot+Run", icon = "HoD_Shoot", actions = listOf(TouchButtonAction(type = "key", mode = "hold", keyName = "SPACE")))
+                    "btn_weapon" -> button.copy(label = "Shoot", icon = "HoD_Shoot", actions = listOf(TouchButtonAction(type = "key", mode = "hold", keyName = "SHIFT")))
+                    "btn_run" -> button.copy(label = "Run", icon = "HoD_Run", actions = listOf(TouchButtonAction(type = "key", mode = "hold", keyName = "CTRL")))
+                    "btn_jump" -> button.copy(label = "Jump", icon = "HoD_Jump", actions = listOf(TouchButtonAction(type = "key", mode = "hold", keyName = "ENTER")))
+                    "btn_shoot" -> button.copy(label = "Shoot", icon = "HoD_Shoot", actions = listOf(TouchButtonAction(type = "key", mode = "hold", keyName = "SHIFT")))
+                    "btn_inv" -> button.copy(label = "Inventory", icon = "inventory")
+                    "btn_status" -> button.copy(label = "Status", icon = "status")
+                    else -> button
+                }
+            }.toMutableList()
         val hasJump = updatedButtons.any { button ->
             button.id == "btn_jump" || button.actions.any { it.type == "key" && it.keyName?.uppercase() == "UP" }
         }

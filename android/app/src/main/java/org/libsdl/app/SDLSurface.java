@@ -73,7 +73,7 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
         requestFocus();
         setOnKeyListener(this);
         setOnTouchListener(this);
-        enableSensor(Sensor.TYPE_ACCELEROMETER, true);
+        enableSensor(Sensor.TYPE_ACCELEROMETER, false);
     }
 
     public Surface getNativeSurface() {
@@ -300,15 +300,8 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 
     // Sensor events
     public void enableSensor(int sensortype, boolean enabled) {
-        // TODO: This uses getDefaultSensor - what if we have >1 accels?
-        if (enabled) {
-            mSensorManager.registerListener(this,
-                            mSensorManager.getDefaultSensor(sensortype),
-                            SensorManager.SENSOR_DELAY_GAME, null);
-        } else {
-            mSensorManager.unregisterListener(this,
-                            mSensorManager.getDefaultSensor(sensortype));
-        }
+        mSensorManager.unregisterListener(this,
+                        mSensorManager.getDefaultSensor(sensortype));
     }
 
     @Override
@@ -318,48 +311,7 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-
-            // Since we may have an orientation set, we won't receive onConfigurationChanged events.
-            // We thus should check here.
-            int newOrientation;
-
-            float x, y;
-            switch (mDisplay.getRotation()) {
-                case Surface.ROTATION_90:
-                    x = -event.values[1];
-                    y = event.values[0];
-                    newOrientation = SDLActivity.SDL_ORIENTATION_LANDSCAPE;
-                    break;
-                case Surface.ROTATION_270:
-                    x = event.values[1];
-                    y = -event.values[0];
-                    newOrientation = SDLActivity.SDL_ORIENTATION_LANDSCAPE_FLIPPED;
-                    break;
-                case Surface.ROTATION_180:
-                    x = -event.values[0];
-                    y = -event.values[1];
-                    newOrientation = SDLActivity.SDL_ORIENTATION_PORTRAIT_FLIPPED;
-                    break;
-                case Surface.ROTATION_0:
-                default:
-                    x = event.values[0];
-                    y = event.values[1];
-                    newOrientation = SDLActivity.SDL_ORIENTATION_PORTRAIT;
-                    break;
-            }
-
-            if (newOrientation != SDLActivity.mCurrentOrientation) {
-                SDLActivity.mCurrentOrientation = newOrientation;
-                SDLActivity.onNativeOrientationChanged(newOrientation);
-            }
-
-            SDLActivity.onNativeAccel(-x / SensorManager.GRAVITY_EARTH,
-                                      y / SensorManager.GRAVITY_EARTH,
-                                      event.values[2] / SensorManager.GRAVITY_EARTH);
-
-
-        }
+        return;
     }
 
     // Captured pointer events for API 26.

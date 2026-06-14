@@ -1,4 +1,4 @@
-package com.heartofdarkness.reborn.touch
+package com.hod.reborn.touch
 
 import android.app.Activity
 import android.os.Build
@@ -8,7 +8,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import com.heartofdarkness.reborn.HodActivity
+import com.hod.reborn.HodActivity
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.libsdl.app.SDLActivity
@@ -33,6 +33,29 @@ class TouchOverlayController(
     private var schlossButton: TouchOverlayLockButtonView? = null
     private var gearButton: TouchOverlaySettingsButtonView? = null
     private var gridView: TouchOverlayGridView? = null
+    private var lastMenuOpenState: Boolean? = null
+    private val menuPollRunnable = object : Runnable {
+        override fun run() {
+            val isOpen = HodActivity.nativeIsMenuOpen()
+            if (isOpen != lastMenuOpenState) {
+                lastMenuOpenState = isOpen
+                applyMenuState(isOpen)
+            }
+            root.postDelayed(this, 100L)
+        }
+    }
+
+    private fun applyMenuState(isMenuOpen: Boolean) {
+        for (view in buttonViews) {
+            when (view.config.id) {
+                "btn_jump" -> view.updateConfig(view.config.copy(
+                    icon = if (isMenuOpen) "HoD_Check" else "HoD_Jump"))
+                "btn_shoot" -> view.updateConfig(view.config.copy(
+                    icon = if (isMenuOpen) "HoD_Cancel" else "HoD_Shoot"))
+                "btn_run" -> view.visibility = if (isMenuOpen) View.GONE else View.VISIBLE
+            }
+        }
+    }
 
     fun attach() {
         if (attached) return
@@ -45,6 +68,7 @@ class TouchOverlayController(
         HodActivity.nativeSetCheat(0, config!!.cheatSpectreFireballNoHit)
         HodActivity.nativeSetCheat(1, config!!.cheatOneHitPlasmaCannon)
         HodActivity.nativeSetCheat(2, config!!.cheatWalkOnLava)
+        HodActivity.nativeSetVideoFilter(config!!.videoFilter)
 
         val container = FrameLayout(activity).apply {
             isClickable = false; isFocusable = false
@@ -66,6 +90,7 @@ class TouchOverlayController(
             syncGlobalConfigToButtonViews()
             updateSchlossButtonState()
         }
+        root.postDelayed(menuPollRunnable, 100L)
     }
 
     fun detach() {
@@ -78,6 +103,7 @@ class TouchOverlayController(
         overlayContainer = null
         saveDebounceRunnable?.let { root.removeCallbacks(it) }
         saveDebounceRunnable = null
+        root.removeCallbacks(menuPollRunnable)
         attached = false
     }
 
@@ -103,6 +129,7 @@ class TouchOverlayController(
     fun resetToDefaults() {
         config = store.defaultConfig()
         store.save(config!!)
+        HodActivity.nativeSetVideoFilter(config!!.videoFilter)
         root.post {
             removeAllButtonViews()
             captureContainerSize()
@@ -250,6 +277,7 @@ class TouchOverlayController(
         config = updated
         saveConfig()
         syncGlobalConfigToButtonViews()
+        HodActivity.nativeSetVideoFilter(updated.videoFilter)
         if (controllerEnabled && controllerConfig != null) {
             val mappingJson = Json.encodeToString(controllerConfig!!.mapping)
             HodActivity.nativeSetControllerConfig(controllerEnabled, mappingJson, updated.dpadDoubleTapRunEnabled)
@@ -277,10 +305,9 @@ class TouchOverlayController(
 
     private fun isTouchOnAnyButton(x: Float, y: Float): Boolean {
         for (view in buttonViews) {
-            if (x >= view.left.toFloat() && x <= view.right.toFloat() &&
-                y >= view.top.toFloat() && y <= view.bottom.toFloat()) {
-                return true
-            }
+            val localX = x - view.left
+            val localY = y - view.top
+            if (view.isPointInsideShape(localX, localY)) return true
         }
         if (schlossButton != null) {
             val v = schlossButton!!

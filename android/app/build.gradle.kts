@@ -5,12 +5,27 @@ plugins {
 }
 
 android {
-    namespace = "com.heartofdarkness.reborn"
+    namespace = "com.hod.reborn"
     compileSdk = 35
     ndkVersion = "27.2.12479018"
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("hod-release.jks")
+            storePassword = "android"
+            keyAlias = "hod"
+            keyPassword = "android"
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
     defaultConfig {
-        applicationId = "com.heartofdarkness.reborn"
+        applicationId = "com.hod.reborn"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -50,4 +65,5 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.documentfile:documentfile:1.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("com.caverock:androidsvg-aar:1.4")
 }

@@ -1,12 +1,13 @@
-package com.heartofdarkness.reborn
+package com.hod.reborn
 
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
-import com.heartofdarkness.reborn.touch.ControllerConfig
-import com.heartofdarkness.reborn.touch.ControllerConfigStore
-import com.heartofdarkness.reborn.touch.TouchButtonStore
-import com.heartofdarkness.reborn.touch.TouchOverlayController
+import com.hod.reborn.touch.ControllerConfig
+import com.hod.reborn.touch.ControllerConfigStore
+import com.hod.reborn.touch.TouchButtonStore
+import com.hod.reborn.touch.SvgIconManager
+import com.hod.reborn.touch.TouchOverlayController
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.libsdl.app.SDLActivity
@@ -24,6 +25,15 @@ class HodActivity : SDLActivity() {
         @JvmStatic
         external fun nativeSetControllerConfig(enabled: Boolean, mapping: String, dpadDoubleTapRunEnabled: Boolean)
 
+        @JvmStatic
+        external fun nativeSetVideoFilter(filterName: String)
+
+        @JvmStatic
+        external fun nativeToggleGameMenu()
+
+        @JvmStatic
+        external fun nativeIsMenuOpen(): Boolean
+
     }
 
     private var touchOverlayController: TouchOverlayController? = null
@@ -31,6 +41,8 @@ class HodActivity : SDLActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        SvgIconManager.init(this)
 
         controllerEnabled = intent.getBooleanExtra("controller_enabled", false)
         Log.i(TAG, "Controller enabled: $controllerEnabled")
@@ -40,8 +52,9 @@ class HodActivity : SDLActivity() {
         val mappingJson = Json.encodeToString(controllerConfig.mapping)
         val touchStore = TouchButtonStore(filesDir)
         val touchConfig = touchStore.loadOrDefault()
-        Log.i(TAG, "Controller config loaded, mapping: $mappingJson, dpadRun=${touchConfig.dpadDoubleTapRunEnabled}")
+        Log.i(TAG, "Controller config loaded, mapping: $mappingJson, dpadRun=${touchConfig.dpadDoubleTapRunEnabled}, videoFilter=${touchConfig.videoFilter}")
         nativeSetControllerConfig(controllerEnabled, mappingJson, touchConfig.dpadDoubleTapRunEnabled)
+        nativeSetVideoFilter(touchConfig.videoFilter)
 
         if (!TOUCH_OVERLAY_ENABLED) {
             Log.i(TAG, "Touch overlay disabled for startup crash isolation")

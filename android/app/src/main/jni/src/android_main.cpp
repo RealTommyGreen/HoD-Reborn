@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <cstring>
 #include "game.h"
+#include "menu.h"
 #include "system.h"
 #include "util.h"
 #include "video.h"
@@ -21,10 +22,17 @@ static uint32_t g_pendingCheatMask = 0;
 static bool g_pendingControllerEnabled = false;
 static char g_pendingControllerMapping[2048] = {0};
 static bool g_pendingDpadDoubleTapRun = false;
+static char g_pendingVideoFilter[16] = "nearest";
+static SDL_atomic_t g_menuToggleRequest;
+static bool g_menuOpenedFromGame = false;
+
+extern "C" void System_SDL2_requestScaler(const char *name, int multiplier);
+
+extern "C" bool Android_isMenuOpenedFromGame();
 
 extern "C" {
 
-JNIEXPORT void JNICALL Java_com_heartofdarkness_reborn_HodActivity_nativeSetCheat(JNIEnv *env, jclass cls, jint cheatId, jboolean enabled) {
+JNIEXPORT void JNICALL Java_com_hod_reborn_HodActivity_nativeSetCheat(JNIEnv *env, jclass cls, jint cheatId, jboolean enabled) {
     // HoD cheat bits (game.h): kCheatSpectreFireballNoHit=1, kCheatOneHitPlasmaCannon=2,
     // kCheatOneHitSpecialPowers=4, kCheatWalkOnLava=8, kCheatGateNoCrush=16,
     // kCheatLavaNoHit=32, kCheatRockShadowNoHit=64
@@ -49,11 +57,7 @@ JNIEXPORT void JNICALL Java_com_heartofdarkness_reborn_HodActivity_nativeSetChea
     HOD_LOGI("nativeSetCheat cheatId=%d enabled=%d mask=0x%x", cheatId, enabled, g_pendingCheatMask);
 }
 
-JNIEXPORT void JNICALL Java_com_heartofdarkness_reborn_HodActivity_nativeSetScreenMode(JNIEnv *env, jclass cls, jint mode) {
-    HOD_LOGI("nativeSetScreenMode mode=%d (stub, not applicable to HoD)", mode);
-}
-
-JNIEXPORT void JNICALL Java_com_heartofdarkness_reborn_HodActivity_nativeSetControllerConfig(JNIEnv *env, jclass cls, jboolean enabled, jstring mapping, jboolean dpadDoubleTapRunEnabled) {
+JNIEXPORT void JNICALL Java_com_hod_reborn_HodActivity_nativeSetControllerConfig(JNIEnv *env, jclass cls, jboolean enabled, jstring mapping, jboolean dpadDoubleTapRunEnabled) {
     g_pendingControllerEnabled = (enabled == JNI_TRUE);
     g_pendingDpadDoubleTapRun = (dpadDoubleTapRunEnabled == JNI_TRUE);
 
@@ -72,15 +76,49 @@ JNIEXPORT void JNICALL Java_com_heartofdarkness_reborn_HodActivity_nativeSetCont
     HOD_LOGI("nativeSetControllerConfig enabled=%d dpadDoubleTap=%d (stub)", g_pendingControllerEnabled, g_pendingDpadDoubleTapRun);
 }
 
-JNIEXPORT void JNICALL Java_com_heartofdarkness_reborn_HodActivity_nativeSetTouchInventoryEnabled(JNIEnv *env, jclass cls, jboolean enabled) {
-    HOD_LOGI("nativeSetTouchInventoryEnabled enabled=%d (stub, not applicable to HoD)", enabled);
+JNIEXPORT void JNICALL Java_com_hod_reborn_HodActivity_nativeSetVideoFilter(JNIEnv *env, jclass cls, jstring filterName) {
+    const char *filterStr = filterName ? env->GetStringUTFChars(filterName, nullptr) : nullptr;
+    const char *scalerName = "nearest";
+    int multiplier = 1;
+    if (filterStr) {
+        if (strcmp(filterStr, "linear") == 0) {
+            scalerName = "linear";
+            multiplier = 3;
+        } else if (strcmp(filterStr, "xbr") == 0) {
+            scalerName = "xbr";
+            multiplier = 3;
+        }
+    }
+    strncpy(g_pendingVideoFilter, scalerName, sizeof(g_pendingVideoFilter) - 1);
+    g_pendingVideoFilter[sizeof(g_pendingVideoFilter) - 1] = '\0';
+    System_SDL2_requestScaler(g_pendingVideoFilter, multiplier);
+    HOD_LOGI("nativeSetVideoFilter filter=%s scaler=%s multiplier=%d", filterStr ? filterStr : "(null)", scalerName, multiplier);
+    if (filterStr) {
+        env->ReleaseStringUTFChars(filterName, filterStr);
+    }
 }
 
-JNIEXPORT jint JNICALL Java_com_heartofdarkness_reborn_HodActivity_nativeGetTouchInputContext(JNIEnv *env, jclass cls) {
-    return 0; // TOUCH_INPUT_CONTEXT_GAMEPLAY default
+JNIEXPORT void JNICALL Java_com_hod_reborn_HodActivity_nativeToggleGameMenu(JNIEnv *env, jclass cls) {
+    SDL_AtomicSet(&g_menuToggleRequest, 1);
+}
+
+JNIEXPORT jboolean JNICALL Java_com_hod_reborn_HodActivity_nativeIsMenuOpen(JNIEnv *env, jclass cls) {
+    return Android_isMenuOpenedFromGame() ? JNI_TRUE : JNI_FALSE;
 }
 
 } // extern "C"
+
+extern "C" bool Android_consumeMenuToggleRequest() {
+    return SDL_AtomicCAS(&g_menuToggleRequest, 1, 0) == SDL_TRUE;
+}
+
+extern "C" bool Android_isMenuOpenedFromGame() {
+    return g_menuOpenedFromGame;
+}
+
+extern "C" void Android_setMenuOpenedFromGame(bool opened) {
+    g_menuOpenedFromGame = opened;
+}
 
 extern "C" int SDL_main(int argc, char *argv[]) {
     setvbuf(stdout, nullptr, _IONBF, 0);
@@ -115,7 +153,8 @@ extern "C" int SDL_main(int argc, char *argv[]) {
         HOD_LOGI("Game created, initializing display");
         g_game->_res->loadSetupDat();
         const bool isPsx = g_game->_res->_isPsx;
-        g_system->init("Heart of Darkness", Video::W, Video::H, true, false, isPsx);
+        g_system->setScaler(g_pendingVideoFilter, strcmp(g_pendingVideoFilter, "nearest") == 0 ? 1 : 3);
+        g_system->init("HoD Reborn", Video::W, Video::H, true, false, isPsx);
 
         // Setup audio
         {
@@ -132,18 +171,43 @@ extern "C" int SDL_main(int argc, char *argv[]) {
         }
         g_game->displayLoadingScreen();
 
-        HOD_LOGI("Entering level main loop");
+        HOD_LOGI("Entering menu/level main loop");
         bool resume = true;
         int level = 0;
         int checkpoint = 0;
+        g_menuOpenedFromGame = true;
         do {
             g_game->loadSetupCfg(resume);
+            if (resume) {
+                g_system->inp.mask = 0;
+                g_system->inp.prevMask = 0;
+                g_system->pad.mask = 0;
+                g_system->pad.prevMask = 0;
+                Menu *menu = new Menu(g_game, g_game->_paf, g_game->_res, g_game->_video);
+                const bool runGame = menu->mainLoop();
+                delete menu;
+                g_menuOpenedFromGame = false;
+                if (!runGame) {
+                    break;
+                }
+            }
             bool levelChanged = false;
             while (!g_system->inp.quit && level < kLvl_test) {
                 g_game->displayLoadingScreen();
                 g_game->mainLoop(level, checkpoint, levelChanged);
                 if (resume) {
                     g_game->saveSetupCfg();
+                }
+                if (g_game->_returnToMenu) {
+                    HOD_LOGI("Returning to main menu");
+                    g_system->inp.mask = 0;
+                    g_system->inp.prevMask = 0;
+                    g_system->pad.mask = 0;
+                    g_system->pad.prevMask = 0;
+                    resume = true;
+                    level = g_game->_currentLevel;
+                    checkpoint = g_game->_currentLevelCheckpoint;
+                    break;
                 }
                 if (g_game->_res->_isDemo) {
                     break;

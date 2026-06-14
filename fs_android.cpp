@@ -8,6 +8,7 @@
 #include <SDL.h>
 
 #include <assert.h>
+#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
@@ -17,7 +18,7 @@
 #include "fs.h"
 
 static AAssetManager *_assetManager;
-static const char *_dataPath;
+static const char *s_dataPath;
 
 static int asset_readfn(void *cookie, char *buf, int size) {
 	AAsset *asset = (AAsset *)cookie;
@@ -43,14 +44,48 @@ void android_setAssetManager(AAssetManager *assetManager) {
 	_assetManager = assetManager;
 }
 
+static bool findDataFileRecursive(const char *dir, const char *name, char *out, int outSize) {
+	DIR *d = opendir(dir);
+	if (!d) {
+		return false;
+	}
+	dirent *de;
+	while ((de = readdir(d)) != NULL) {
+		if (de->d_name[0] == '.') {
+			continue;
+		}
+		char path[MAXPATHLEN];
+		snprintf(path, sizeof(path), "%s/%s", dir, de->d_name);
+		struct stat st;
+		if (stat(path, &st) != 0) {
+			continue;
+		}
+		if (S_ISDIR(st.st_mode)) {
+			if (findDataFileRecursive(path, name, out, outSize)) {
+				closedir(d);
+				return true;
+			}
+		} else if (S_ISREG(st.st_mode) && strcasecmp(de->d_name, name) == 0) {
+			snprintf(out, outSize, "%s", path);
+			closedir(d);
+			return true;
+		}
+	}
+	closedir(d);
+	return false;
+}
+
 FILE *android_fopen(const char *fname, const char *mode) {
 	__android_log_print(ANDROID_LOG_INFO, LOG_TAG, "android_fopen '%s' mode '%s'", fname, mode);
 	assert(mode[0] == 'r');
 	if (1) { // support for gamedata files installed on external storage
 		char path[MAXPATHLEN];
-		snprintf(path, sizeof(path), "%s/%s", _dataPath, fname);
+		snprintf(path, sizeof(path), "%s/%s", s_dataPath, fname);
 		struct stat st;
 		if (stat(path, &st) == 0 && S_ISREG(st.st_mode)) {
+			return fopen(path, mode);
+		}
+		if (findDataFileRecursive(s_dataPath, fname, path, sizeof(path))) {
 			return fopen(path, mode);
 		}
 	}
@@ -80,9 +115,9 @@ FileSystem::FileSystem(const char *dataPath, const char *savePath) {
 	assert(globalAssetManager);
 
 	_assetManager = AAssetManager_fromJava(env, globalAssetManager);
-	_dataPath = dataPath;
+	s_dataPath = dataPath;
 	_savePath = savePath;
-	__android_log_print(ANDROID_LOG_INFO, LOG_TAG, "dataPath %s _assetManager %p", _dataPath, _assetManager);
+	__android_log_print(ANDROID_LOG_INFO, LOG_TAG, "dataPath %s _assetManager %p", s_dataPath, _assetManager);
 }
 
 FileSystem::~FileSystem() {
@@ -103,15 +138,9 @@ FILE *FileSystem::openAssetFile(const char *filename) {
 }
 
 FILE *FileSystem::openSaveFile(const char *filename, bool write) {
-	FILE *fp = 0;
-	char *prefPath = SDL_GetPrefPath(ANDROID_PACKAGE_NAME, "hode");
-	if (prefPath) {
-		char path[MAXPATHLEN];
-		snprintf(path, sizeof(path), "%s/%s", prefPath, filename);
-		fp = fopen(path, write ? "wb" : "rb");
-		SDL_free(prefPath);
-	}
-	return fp;
+	char path[MAXPATHLEN];
+	snprintf(path, sizeof(path), "%s/%s", _savePath, filename);
+	return fopen(path, write ? "wb" : "rb");
 }
 
 int FileSystem::closeFile(FILE *fp) {

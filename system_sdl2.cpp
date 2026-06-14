@@ -12,9 +12,14 @@
 
 static const char *kIconBmp = "icon.bmp";
 
-static int _scalerMultiplier = 3;
-static const Scaler *_scaler = &scaler_xbr;
+extern const Scaler scaler_nearest;
+
+static int _scalerMultiplier = 1;
+static const Scaler *_scaler = &scaler_nearest;
 static ScaleProc _scalerProc;
+static SDL_atomic_t _pendingScalerChange;
+static char _pendingScalerName[16];
+static int _pendingScalerMultiplier;
 
 const Scaler scaler_linear = {
 	"linear",
@@ -95,10 +100,22 @@ struct System_SDL2 : System {
 	void setupDefaultKeyMappings();
 	void updateKeys(PlayerInput *inp);
 	void prepareScaledGfx(const char *caption, bool fullscreen, bool widescreen, bool yuv);
+	void recreateScaledTextures(bool widescreen, bool yuv);
+	void applyPendingScalerChange();
 };
 
 static System_SDL2 system_sdl2;
 System *const g_system = &system_sdl2;
+
+extern "C" void System_SDL2_requestScaler(const char *name, int multiplier) {
+	if (!name) {
+		return;
+	}
+	strncpy(_pendingScalerName, name, sizeof(_pendingScalerName) - 1);
+	_pendingScalerName[sizeof(_pendingScalerName) - 1] = 0;
+	_pendingScalerMultiplier = multiplier;
+	SDL_AtomicSet(&_pendingScalerChange, 1);
+}
 
 void System_printLog(FILE *fp, const char *s) {
 	if (fp == stderr) {
@@ -327,6 +344,9 @@ void System_SDL2::setScaler(const char *name, int multiplier) {
 			_scaler = scaler;
 		}
 	}
+	if (_renderer && _texture) {
+		recreateScaledTextures(_widescreenTexture != 0, _backgroundTexture != 0);
+	}
 }
 
 void System_SDL2::setGamma(float gamma) {
@@ -415,6 +435,8 @@ static void clearScreen(uint32_t *dst, int dstPitch, int x, int y, int w, int h,
 }
 
 void System_SDL2::updateScreen(bool drawWidescreen) {
+	applyPendingScalerChange();
+
 	void *texturePtr = 0;
 	int texturePitch = 0;
 	if (SDL_LockTexture(_texture, 0, &texturePtr, &texturePitch) != 0) {
@@ -816,25 +838,15 @@ void System_SDL2::updateKeys(PlayerInput *inp) {
 }
 
 void System_SDL2::prepareScaledGfx(const char *caption, bool fullscreen, bool widescreen, bool yuv) {
-	const int w = _screenW * _scalerMultiplier;
-	const int h = _screenH * _scalerMultiplier;
 	if (_scalerMultiplier > 1) {
 		if (_scalerMultiplier < _scaler->factorMin) {
 			_scalerMultiplier = _scaler->factorMin;
 		} else if (_scalerMultiplier > _scaler->factorMax) {
 			_scalerMultiplier = _scaler->factorMax;
 		}
-		_scalerProc = _scaler->scale[_scalerMultiplier - 2];
 	}
-	if (_scalerProc) {
-		_texW = w;
-		_texH = h;
-		_texScale = _scalerMultiplier;
-	} else {
-		_texW = _screenW;
-		_texH = _screenH;
-		_texScale = 1;
-	}
+	const int w = _screenW * _scalerMultiplier;
+	const int h = _screenH * _scalerMultiplier;
 	const int windowW = widescreen ? h * 16 / 9 : w;
 	const int windowH = h;
 	const int flags = fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_RESIZABLE;
@@ -845,9 +857,47 @@ void System_SDL2::prepareScaledGfx(const char *caption, bool fullscreen, bool wi
 		SDL_FreeSurface(icon);
 	}
 	_renderer = SDL_CreateRenderer(_window, -1, SDL_RENDERER_ACCELERATED | (yuv ? SDL_RENDERER_TARGETTEXTURE : 0));
-	SDL_RenderSetLogicalSize(_renderer, windowW, windowH);
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, (_scaler == &scaler_nearest) ? "0" : "1");
+	if (yuv) {
+		_backgroundTexture = SDL_CreateTexture(_renderer, SDL_PIXELFORMAT_YV12, SDL_TEXTUREACCESS_STREAMING, _screenW, _screenH);
+	} else {
+		_backgroundTexture = 0;
+	}
+	recreateScaledTextures(widescreen, yuv);
+}
 
+void System_SDL2::recreateScaledTextures(bool widescreen, bool yuv) {
+	if (_texture) {
+		SDL_DestroyTexture(_texture);
+		_texture = 0;
+	}
+	if (_widescreenTexture) {
+		SDL_DestroyTexture(_widescreenTexture);
+		_widescreenTexture = 0;
+	}
+	_scalerProc = 0;
+	if (_scalerMultiplier > 1) {
+		if (_scalerMultiplier < _scaler->factorMin) {
+			_scalerMultiplier = _scaler->factorMin;
+		} else if (_scalerMultiplier > _scaler->factorMax) {
+			_scalerMultiplier = _scaler->factorMax;
+		}
+		_scalerProc = _scaler->scale[_scalerMultiplier - 2];
+	}
+	const int w = _screenW * _scalerMultiplier;
+	const int h = _screenH * _scalerMultiplier;
+	if (_scalerProc) {
+		_texW = w;
+		_texH = h;
+		_texScale = _scalerMultiplier;
+	} else {
+		_texW = _screenW;
+		_texH = _screenH;
+		_texScale = 1;
+	}
+	const int logicalW = widescreen ? (_screenH * _scalerMultiplier) * 16 / 9 : _screenW * _scalerMultiplier;
+	const int logicalH = _screenH * _scalerMultiplier;
+	SDL_RenderSetLogicalSize(_renderer, logicalW, logicalH);
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, (_scaler == &scaler_nearest) ? "0" : "1");
 	const int pixelFormat = yuv ? SDL_PIXELFORMAT_RGBA8888 : SDL_PIXELFORMAT_RGB888;
 	_texture = SDL_CreateTexture(_renderer, pixelFormat, SDL_TEXTUREACCESS_STREAMING, _texW, _texH);
 	if (widescreen) {
@@ -860,11 +910,17 @@ void System_SDL2::prepareScaledGfx(const char *caption, bool fullscreen, bool wi
 		_widescreenTexture = 0;
 	}
 	if (yuv) {
-		_backgroundTexture = SDL_CreateTexture(_renderer, SDL_PIXELFORMAT_YV12, SDL_TEXTUREACCESS_STREAMING, _screenW, _screenH);
 		// the game texture is drawn on top
 		SDL_SetTextureBlendMode(_texture, SDL_BLENDMODE_BLEND);
-	} else {
-		_backgroundTexture = 0;
+	}
+	if (_fmt) {
+		SDL_FreeFormat(_fmt);
 	}
 	_fmt = SDL_AllocFormat(pixelFormat);
+}
+
+void System_SDL2::applyPendingScalerChange() {
+	if (SDL_AtomicCAS(&_pendingScalerChange, 1, 0)) {
+		setScaler(_pendingScalerName, _pendingScalerMultiplier);
+	}
 }

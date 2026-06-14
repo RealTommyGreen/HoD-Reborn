@@ -44,6 +44,108 @@
 
 ---
 
+## 2026-05-25: Ingame-Menue-Toggle, Menue-Input und Restore-Fixes
+
+### Menuebutton und Eingabelogik
+- Touch-Menuebutton von normalem `ESCAPE` auf native Aktion `native_menu` umgestellt.
+- `nativeToggleGameMenu()` als JNI-Bruecke ergaenzt.
+- Alte Touch-Configs ohne `schema_version` werden jetzt trotzdem normalisiert:
+  - `btn_menu` -> `native_menu`
+  - Run -> `CTRL`
+  - Jump -> `ENTER`
+  - Shoot -> `SHIFT`
+  - Shoot+Run -> `SPACE`
+- `TOUCH_OVERLAY_CONFIG_VERSION` auf 11 angehoben.
+- Im nativen Menue bestaetigt auf Android nur noch Jump/ENTER.
+- Shoot/SHIFT funktioniert im Optionsmenue als Zurueck.
+- Run/CTRL wird im Android-Menue nicht mehr als Menueaktion ausgewertet, damit D-Pad-Double-Tap-Run kein versehentliches Bestaetigen ausloest.
+
+### Ingame-Menue ohne Level-Abbruch
+- Menuebutton im Spiel oeffnet das native HoD-Menue nun innerhalb des laufenden `Game::levelMainLoop()`.
+- Das Spiel setzt dabei nicht mehr `_endLevel` und springt nicht mehr in den aeusseren Android-Mainloop.
+- Zweiter Druck auf den Menuebutton im Menue schliesst das Menue und kehrt in denselben Level-Kontext zurueck.
+- Start-Hauptmenue ignoriert den Overlay-Menuebutton weiterhin, solange kein Spiel laeuft.
+
+### Palette- und Sound-Restore nach Ingame-Menue
+- Neue Android-Restore-Routine nach Ingame-Menue:
+  - leert Input-Masks vor und nach dem Menue,
+  - stoppt Menue-Soundobjekte via `resetSound()`,
+  - leert damit Audiopuffer/Mixing-Queue,
+  - stellt die aktuelle Spielpalette ueber `Video::updateGamePalette(_displayPaletteBuffer)` wieder her.
+- Fix fuer verzerrte Farben nach Rueckkehr aus dem Menue.
+- Fix fuer haengenden/repeatenden Menue-Sound nach Rueckkehr ins Spiel.
+
+### Sound-Restore Nachfix
+- Ursache: `Resource::loadDatMenuBuffers()` laedt fuer das native Hauptmenue eigene SSS-Daten aus der DAT und ersetzt damit die Level-SSS-Daten im gemeinsamen `Resource`-Objekt.
+- Nach Rueckkehr aus dem Ingame-Menue werden jetzt unter Mixer-Lock:
+  - aktive Menue-Soundobjekte und Audiopuffer geloescht,
+  - die aktuelle Level-SSS-Datei erneut geladen (`_sssFile`, bzw. PSX `_lvlFile + _lvlSssOffset`),
+  - Soundobjekte fuer die neu geladenen Level-SSS-Daten zurueckgesetzt,
+  - aktuelle Screen-Hintergrundsounds via `setupBackgroundBitmap()` wieder initialisiert.
+- Dadurch arbeitet der Spielsound nach dem Menue wieder mit Level-Sounddaten statt mit Menue-Samples.
+- Geraetetest bestaetigt: Rueckkehr aus dem Ingame-Menue stellt Bild und Spielsound korrekt wieder her.
+
+### Build- und Geraetepruefung
+- `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL.
+- APK installiert mit `adb install -r android\app\build\outputs\apk\debug\app-debug.apk`.
+- App gestartet; Logcat zeigt `Entering menu/level main loop`, kein Startcrash im geprueften Ausschnitt.
+- Nach Sound-Restore-Nachfix erneut gebaut/installiert und Start-Logcat geprueft: kein Startcrash im geprueften Ausschnitt.
+- Funktionaler Test auf dem Geraet erfolgreich: Menue oeffnen/schliessen im Spiel ohne Farbfehler und ohne haengenden Menue-Sound.
+
+---
+
+## 2026-05-25: Asset-Startfix, Videofilter-Menue und Sensor-Deaktivierung
+
+### Asset-Startfix auf Geraet
+- Import-/Validierungslogik fuer `storage/emulated/games/heart of darkness/` robuster gemacht:
+  - Asset-Pruefung rekursiv und case-insensitive statt nur auf Root-Ebene.
+  - `hod_oem.paf` als gueltige PAF-Variante beruecksichtigt.
+  - PAF bei der Launcher-Validierung optional behandelt, damit gueltige Datensaetze ohne harte Fehlmeldung starten.
+- Android-Dateisystemzugriff korrigiert:
+  - Datapath-Lookups rekursiv und case-insensitive.
+  - Globalen Datapath-State repariert, damit Native-Code wirklich den importierten Asset-Pfad nutzt.
+- Launcher-Hinweise an die erwartete HoD-Asset-Struktur angepasst.
+
+### Videofilter im Touch-Overlay-Settings-Menue
+- Touch-Overlay-Konfiguration auf Schema-Version 10 angehoben.
+- Neues persistiertes Feld `video_filter` mit Default `nearest`.
+- Zahnrad-Settings enthalten jetzt eine Video-Sektion:
+  - `Original Pixels` = originaler Look / nearest, Default.
+  - `Soft Linear` = linearer Filter.
+  - `xBR Smooth` = xBR-Scaler.
+- Native JNI-Bruecke `nativeSetVideoFilter()` hinzugefuegt.
+- SDL2-Renderer kann den Scaler zur Laufzeit wechseln und Texturen/Logical Size neu anlegen.
+- App setzt den gespeicherten Filter beim Start und bei jeder Settings-Aenderung live.
+
+### Gyroskop-/Sensorsteuerung deaktiviert
+- Accelerometer-Registrierung in SDL-Resume/Startpfad abgeschaltet.
+- `SDLSurface.onSensorChanged()` liefert keine Sensorwerte mehr an `onNativeAccel()`.
+- Sensorbasierte Landscape-Ausrichtung durch feste Landscape-Ausrichtung ersetzt.
+
+### Build- und Geraetepruefung
+- `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL.
+- APK installiert mit `adb install -r android\app\build\outputs\apk\debug\app-debug.apk`.
+- App auf dem Geraet gestartet.
+- Logcat-Pruefung:
+  - `nativeSetVideoFilter filter=nearest scaler=nearest multiplier=1`
+  - `Entering level main loop`
+  - Kein Startcrash im geprueften Log-Ausschnitt.
+
+### Geaenderte Hauptdateien
+- `SafImporter.kt`
+- `HodLauncherActivity.kt`
+- `fs_android.cpp`
+- `system_sdl2.cpp`
+- `android_main.cpp`
+- `HodActivity.kt`
+- `TouchButtonModels.kt`
+- `TouchOverlayController.kt`
+- `TouchOverlaySettingsDialog.kt`
+- `SDLSurface.java`
+- `SDLActivity.java`
+
+---
+
 ## 2026-05-25: Phase 2 Complete
 
 ### Phase 2: Native HoD-Build integrieren
@@ -250,3 +352,359 @@
 4. App darf ohne Import nicht crashen
 5. JNI-Stubs in android_main.cpp endgueltig aufraeumen (nativeSetScreenMode, nativeSetTouchInventoryEnabled, nativeGetTouchInputContext)
 6. Finale Qualitaetspruefung aller Dateien
+
+---
+
+## 2026-05-25: Phase 5 Complete
+
+### Phase 5: Android-Qualitaet und Buildbarkeit
+
+**Aktionen:**
+
+1. **JNI-Stubs aus android_main.cpp entfernt:**
+   - `nativeSetScreenMode` entfernt (Zeilen 52-54)
+   - `nativeSetTouchInventoryEnabled` entfernt (Zeilen 75-77)
+   - `nativeGetTouchInputContext` entfernt (Zeilen 79-81)
+   - Verbleibende JNI-Funktionen: nur `nativeSetCheat` und `nativeSetControllerConfig`
+   - Datei von 175 auf 164 Zeilen reduziert
+
+2. **TouchButtonPresets.kt gefixt:**
+   - `"Run/Holster"` → `"Run"` korrigiert (HoD hat kein Holster)
+
+3. **VIBRATE-Permission geprueft:**
+   - Wird von SDL2's `SDLControllerManager.java` fuer Gamepad-Haptik genutzt
+   - Permission bleibt im Manifest (korrekt/notwendig)
+
+4. **Finale grep-Pruefung:**
+   - `bermuda|Bermuda|BermudaActivity|BermudaLauncher|BSNative|bsnative` in `*.{kt,java,xml,kts,cpp,h,properties}`:
+     **0 Treffer** ✅
+   - Alle Dateien sind BS-Referenz-frei
+
+5. **No-Crash-Garantie bei fehlendem Import (Code-Review):**
+   - `HodLauncherActivity.onCreate()` → `isImportValid()` → `false` → `createImportUI()`
+   - `SafImporter.validateSource()` → validiert vor Import, zeigt Fehler bei ungueltigem Ordner
+   - `SafImporter.import()` → faengt Exceptions, loescht Partial-Imports
+   - Kein Crash-Pfad identifizierbar ✅
+
+**Files geaendert (4):**
+- `android/app/src/main/jni/src/android_main.cpp` — 3 JNI-Stubs entfernt
+- `touch/TouchButtonPresets.kt` — "Run/Holster"→"Run"
+- `ANDROID_PORT_PLAN.md` — Phase 5 Status
+- `ANDROID_PORT_LOG.md` — Phase 5 Eintrag
+
+**Review-Ergebnisse:**
+- grep "bermuda\|Bermuda\|BSNative" in android/: 0 Treffer ✅
+- grep "nativeSetScreenMode\|nativeSetTouchInventory\|nativeGetTouchInput" in android/: 0 Treffer ✅
+- android_main.cpp: 2 JNI-Funktionen (nativeSetCheat, nativeSetControllerConfig) + SDL_main ✅
+- Gesamtanzahl Dateien unter android/: 46 (unveraendert: SDL Java, Resources, Gradle)
+- Keine BS-Assets/Keystore/Spieldaten im Projekt ✅
+
+**Alle 5 Phasen abgeschlossen. Projekt bereit fuer Codex-Endabnahme.**
+
+---
+
+## 2026-05-25: Codex-Endbefund 1 — Alle 6 Blocker behoben
+
+### Codex-Review ergab 6 Blocker, alle gefixt:
+
+**1. Doppeltes SDL_main (BUILD BLOCKER)** ✅
+- Ursache: CMakeLists.txt baute sowohl `main.cpp` (desktop `main()`) als auch `android_main.cpp` (`SDL_main()`); SDL mappt beides auf `SDL_main`
+- Fix: `main.cpp` aus `ENGINE_SOURCES` in CMakeLists.txt entfernt
+- android_main.cpp enthaelt eigene SDL_main mit voller HoD-Initialisierung
+
+**2. Klammerfehler in TouchInputDispatcher.kt (BUILD BLOCKER)** ✅
+- Ursache: Extra `}` nach `performButtonAction()` schloss die Klasse vorzeitig
+- Fix: Klammerstruktur repariert; Klasse korrekt am Dateiende geschlossen
+- Alle Methoden (releaseAll, performDpadDirection, companion) jetzt innerhalb der Klasse
+
+**3. Touch-Overlay Keymapping falsch** ✅
+- Vorher: Run=SHIFT, Jump=UP, Shoot=SPACE (falsch), kein Shoot+Run
+- Nach system_sdl2.cpp:778-802: Run=CTRL, Jump=ENTER, Shoot=SHIFT, Shoot+Run=SPACE
+- `btn_use` → `btn_shoot` (SHIFT), `btn_weapon` → `btn_shoot_run` (SPACE) hinzugefuegt
+
+**4. Controller-Mapping-UI wirkungslos** ✅
+- nativeSetControllerConfig() ist Stub; system_sdl2.cpp hat hart codierte Joystick-Mappings
+- Controller-Mapping-Button aus Settings-Dialog entfernt; stattdessen Info-Text
+- Gamepad-Defaults an natives Mapping angepasst: A=Run, B=Jump, X=Shoot, Y=Shoot+Run
+
+**5. isImportValid() prueft zu wenig** ✅
+- Vorher: nur Manifest + setup.dat
+- Jetzt: zusaetzlich *_hod.lvl, *_hod.sss, *_hod.mst (je mind. 1) + PAF (mind. 1), case-insensitive
+
+**6. SDK-Pfad fehlt** ✅
+- `android/local.properties` erstellt mit `sdk.dir=C\:\\Users\\Tommy Green\\AppData\\Local\\Android\\Sdk`
+
+### Build-Verifikation
+- `.\gradlew.bat :app:compileDebugKotlin -x externalNativeBuildDebug` → **BUILD SUCCESSFUL** (9s)
+- `.\gradlew.bat :app:compileDebugKotlin :app:externalNativeBuildDebug` → **BUILD SUCCESSFUL** (2m 40s, 3 ABIs)
+
+### Files geaendert (8):
+- `CMakeLists.txt` — main.cpp entfernt
+- `TouchInputDispatcher.kt` — Klammerstruktur repariert
+- `TouchButtonModels.kt` — Default-Overlay + Gamepad auf HoD-Mappings korrigiert
+- `TouchOverlaySettingsDialog.kt` — Controller-Mapping-UI entfernt, TEXT_MUTED hinzugefuegt
+- `SafImporter.kt` — isImportValid() erweitert
+- `local.properties` — SDK-Pfad (neu erstellt)
+- `ANDROID_PORT_PLAN.md` — Codex-Befund dokumentiert
+- `ANDROID_PORT_LOG.md` — Dieser Eintrag
+
+### FreeClaude Eigenpruefung
+- grep "bermuda\|Bermuda\|BSNative" in android/: 0 Treffer ✅
+- Kotlin compile: SUCCESSFUL (nur API-Deprecation-Warnings) ✅
+- Native compile: SUCCESSFUL (arm64-v8a, armeabi-v7a, x86_64) ✅
+- Keine APK gebaut (Codex-Endabnahme steht noch aus)
+
+**Projekt erneut bereit fuer Codex-Endabnahme. Keine APK gebaut.**
+
+---
+
+## 2026-05-25: Codex-Endbefund 2 — APK-Freigabe erteilt
+
+### Codex-Abnahme
+- `compileDebugKotlin -x externalNativeBuildDebug` → BUILD SUCCESSFUL ✅
+- `compileDebugKotlin :externalNativeBuildDebug` (3 ABIs) → BUILD SUCCESSFUL ✅
+- `rg bermuda|Bermuda|BSNative` → 0 Treffer ✅
+- Keine APK/AAB im Source-Tree ✅
+
+### APK-Build
+- **Befehl:** `.\gradlew.bat :app:assembleDebug`
+- **Ergebnis:** BUILD SUCCESSFUL in 10s
+- **APK-Pfad:** `D:\Coding\HoD Android\hode\android\app\build\outputs\apk\debug\app-debug.apk`
+- **Dateigroesse:** 14 MB
+- **ABIs:** arm64-v8a, armeabi-v7a, x86_64
+- **Version:** 0.1.0 (versionCode 1)
+- **Signing:** Android Debug Keystore (default)
+- **Warnungen:** Nur API-Deprecation-Hinweise (FLAG_FULLSCREEN, systemUiVisibility) — keine Fehler
+- **GDrive-Upload:** Erfolgreich durchgefuehrt
+
+### Projektstatus
+- Alle 5 Phasen + beide Codex-Endbefunde abgeschlossen
+- Debug-APK liegt lokal und auf Google Drive
+- Keine Release-APK, kein Signing — nur Debug-Build gemaess Freigabe
+
+---
+
+## 2026-06-04: SVG Phase 1 Complete — Build-Config + Assets + JNI
+
+### Aktionen
+
+**1a. AndroidSVG Dependency:**
+- `android/app/build.gradle.kts`: `implementation("com.caverock:androidsvg-aar:1.4")` nach kotlinx-serialization-json hinzugefuegt (Zeile 68)
+
+**1b. res/raw/ Assets:**
+- `res/raw/` Verzeichnis neu angelegt
+- 5 SVGs aus `D:\Coding\HoD_Icons\` kopiert, lowercase umbenannt:
+  - `hod_run.svg`, `hod_jump.svg`, `hod_shoot.svg`, `hod_cancel.svg`, `hod_check.svg`
+- `res/raw/iconset.json`: Original-iconset.json mit lowercase SVG-Referenzen (`HoD_Run.svg` → `hod_run.svg`, etc.)
+- `res/raw/iconmappings.json`: 1:1 Mapping `{"HoD_Run": "hod_run", "HoD_Jump": "hod_jump", "HoD_Shoot": "hod_shoot", "HoD_Cancel": "hod_cancel", "HoD_Check": "hod_check"}`
+
+**1c. JNI-Bruecke nativeIsMenuOpen():**
+- `android_main.cpp`: Forward-Declaration `extern "C" bool Android_isMenuOpenedFromGame()` vor JNI-Block (Zeile 31), neue JNI-Funktion `Java_com_hod_reborn_HodActivity_nativeIsMenuOpen()` (Zeile 105), returned `Android_isMenuOpenedFromGame() ? JNI_TRUE : JNI_FALSE`
+- `HodActivity.kt`: Neue `external fun nativeIsMenuOpen(): Boolean` in companion object (Zeile 34)
+
+### Review-Ergebnisse
+- grep `nativeIsMenuOpen`: 2 Treffer (cpp JNI-Implementierung + kt Deklaration) ✅
+- grep `androidsvg`: 1 Treffer in build.gradle.kts ✅
+- res/raw/ enthaelt 5 SVGs + iconset.json + iconmappings.json ✅
+- `compileDebugKotlin`: BUILD SUCCESSFUL ✅
+- `externalNativeBuildDebug` (3 ABIs): BUILD SUCCESSFUL ✅
+
+### Files geaendert/erstellt (9)
+- `android/app/build.gradle.kts` — Dependency
+- `android/app/src/main/res/raw/` (NEU) — 7 Dateien (5 SVGs, iconset.json, iconmappings.json)
+- `android/app/src/main/jni/src/android_main.cpp` — Forward-Declaration + JNI
+- `android/app/src/main/java/com/hod/reborn/HodActivity.kt` — external fun
+
+### Naechste Schritte (Phase 2)
+- `touch/SvgIconManager.kt` — Port von JA2 Reborn (1:1 mit Package-Rename und R.raw-Anpassung)
+- `HodActivity.onCreate()` ruft `SvgIconManager.init(this)` auf
+
+---
+
+## 2026-06-04: SVG Phase 2 Complete — SvgIconManager Port
+
+### Aktionen
+
+**SvgIconManager.kt (NEU):**
+- 1:1 Port von JA2 Reborn `SvgIconManager.kt` (181 Zeilen)
+- Package: `com.ja2.reborn.touch` → `com.hod.reborn.touch`
+- R.raw Referenzen: `R.raw.iconset` und `R.raw.iconmappings` (in Phase 1 angelegt)
+- Enthaelt: `init()`, `hasIcon()`, `getIconFill()`, `renderIcon()`, `loadSvgBitmap()`, `targetRect()`
+- 512px Bitmap-Cache mit `ICON_PADDING_FRACTION = 0.08f`
+- `IconSetEntry` data class mit iconFill, iconOffsetX/Y, iconScaleX/Y
+
+**HodActivity.kt:**
+- Import `com.hod.reborn.touch.SvgIconManager` hinzugefuegt
+- `SvgIconManager.init(this)` in `onCreate()` vor Controller-Setup aufgerufen
+
+### Review-Ergebnisse
+- grep `SvgIconManager`: 4 Treffer (HodActivity Import + Aufruf, SvgIconManager.kt Deklaration + TAG) ✅
+- grep `com.ja2` in SvgIconManager.kt: 0 Treffer ✅
+- `compileDebugKotlin`: BUILD SUCCESSFUL ✅
+
+### Files geaendert/erstellt (2)
+- `touch/SvgIconManager.kt` (NEU) — 1:1 JA2-Port
+- `HodActivity.kt` — Import + `SvgIconManager.init(this)`
+
+### Naechste Schritte (Phase 3)
+- Button-Geometrie-Fix + SVG-Rendering in TouchOverlayButtonView.kt
+- iconFill-Feld zu TouchButtonConfig
+- btn_shoot_run entfernen, Icon-Namen aktualisieren, Button-Groessen skalieren
+- Schema-Version 11→12, Config-Migration
+
+---
+
+## 2026-06-04: SVG Phase 3 Complete — Button-Geometrie + SVG-Rendering + Migration
+
+### Aktionen
+
+**3a-b. TouchOverlayButtonView.kt — Geometrie-Fix + SVG-Rendering:**
+- `computeOuterShapeBounds()`: `buttonHeight = minOf(h, w / 1.8f)`, shape-spezifische Bounds-Berechnung
+- `computeIconShapeBounds()`: Circle 0.85× Faktor, sonst Outer-Bounds
+- `drawShape()`: Zeichnet Shape-Hintergrund/Rahmen in Outer-Bounds
+- `iconClipPath()`: Clip-Pfad basierend auf Shape-Typ
+- `onDraw()`: DPAD-Check (`icon == "dpad_map"`) → kein Shape-Hintergrund, nutzt `drawShape()` + `drawIcon()`
+- `drawIcon()`: SVG-first via `SvgIconManager.renderIcon()` mit Clip-Pfad, Fallback auf programmatische Icons mit `shapeDim`-basiertem Scale
+- `drawCenteredText()`: Nutzt `computeOuterShapeBounds()` als Referenz (wie JA2)
+
+**3c. `iconFill`-Feld:**
+- `TouchButtonConfig`: Neues Feld `@SerialName("icon_fill") val iconFill: Float = -1f`
+- `-1f` Sentinel = Default aus iconset.json verwenden
+
+**3d-e-f. Default-Overlay aktualisiert:**
+- btn_shoot_run ENTFERNT (redundant)
+- Icon-Namen: `run` → `HoD_Run`, `jump` → `HoD_Jump`, `weapon` → `HoD_Shoot`
+- Button-Groessen: Run/Jump/Shoot `0.115` → `0.180` (~1.56×)
+- Menu-Button und DPAD unveraendert
+
+**3g-h. Schema-Version + Migration:**
+- `TOUCH_OVERLAY_CONFIG_VERSION`: 11 → **12**
+- `migrateConfig()`: `btn_shoot_run` wird aus alten Config-Lists gefiltert (`.filter { it.id != "btn_shoot_run" }`)
+- Migration mappt alte Icons auf HoD-SVG-Namen
+
+**TouchButtonPresets.kt:**
+- Preset-Icons aktualisiert: `jump` → `HoD_Jump`, `weapon` → `HoD_Shoot`, `shoot_run` → `HoD_Shoot`, `run` → `HoD_Run`
+
+### Review-Ergebnisse
+- grep `btn_shoot_run`: Nur 1 Treffer (filter in Migration) ✅
+- grep `HoD_Run|HoD_Jump|HoD_Shoot`: In defaultButtons() ✅
+- grep `iconFill`: Feld in TouchButtonConfig ✅
+- grep `computeOuterShapeBounds|computeIconShapeBounds|drawShape|SvgIconManager`: Alle in TouchOverlayButtonView ✅
+- `compileDebugKotlin`: BUILD SUCCESSFUL ✅
+
+### Files geaendert (4)
+- `touch/TouchOverlayButtonView.kt` — Geometrie-Fix + SVG-Rendering
+- `touch/TouchButtonModels.kt` — iconFill, Defaults, Schema 12
+- `touch/TouchButtonPresets.kt` — Icon-Namen
+- `touch/TouchButtonStore.kt` — Migration btn_shoot_run-Filter
+
+### Naechste Schritte (Phase 4)
+- `TouchOverlayController.kt` — Menue-Polling + dynamische Icons
+- `applyMenuState()`: btn_jump (HoD_Jump↔HoD_Check), btn_shoot (HoD_Shoot↔HoD_Cancel), btn_run visibility
+
+---
+
+## 2026-06-04: SVG Phase 4 Complete — Dynamische Menue-Icons
+
+### Aktionen
+
+**TouchOverlayController.kt — Menue-Polling + dynamische Icons:**
+
+- `lastMenuOpenState: Boolean?` Feld hinzugefuegt (initial null)
+- `menuPollRunnable`: 100ms Polling-Loop via `root.postDelayed()`, ruft `HodActivity.nativeIsMenuOpen()` auf
+- `applyMenuState(isMenuOpen: Boolean)`:
+  - `btn_jump`: Icon wechselt `HoD_Jump` ↔ `HoD_Check`
+  - `btn_shoot`: Icon wechselt `HoD_Shoot` ↔ `HoD_Cancel`
+  - `btn_run`: `visibility = GONE` wenn Menue offen, `VISIBLE` sonst
+  - btn_menu + dpad: unveraendert
+- Polling startet in `attach()` via `root.postDelayed(menuPollRunnable, 100L)`
+- Polling stoppt in `detach()` via `root.removeCallbacks(menuPollRunnable)`
+
+### Review-Ergebnisse
+- grep `menuPollRunnable|applyMenuState|lastMenuOpenState|nativeIsMenuOpen`: 6 Treffer ✅
+- `compileDebugKotlin`: BUILD SUCCESSFUL ✅
+
+### Files geaendert (1)
+- `touch/TouchOverlayController.kt` — Menue-Polling + `applyMenuState()`
+
+### Naechste Schritte (Phase 5)
+- Voll-Build `gradlew assembleDebug`
+- Logcat pruefen (SvgIconManager laedt 5 Iconsets + 5 Mappings)
+- Visuelle Pruefung auf Geraet: SVG-Renderings, 5-Button-Default, Menue-Icon-Wechsel, DPAD kein Shape
+- Alte Config-Migration verifizieren
+
+---
+
+## 2026-06-04: SVG Phase 5 Complete — Build + Verifikation
+
+### Build
+- `gradlew assembleDebug` → BUILD SUCCESSFUL in 11s
+- APK: `app-debug.apk` (16 MB), 3 ABIs (arm64-v8a, armeabi-v7a, x86_64)
+
+### Geraetetest (initial)
+- App startet ohne Crash ✅
+- `SvgIconManager`: 5 Iconsets geladen, 5 Mappings geladen ✅
+- `TouchOverlayController`: 5 Button Views erstellt (btn_shoot_run ist raus) ✅
+- **Problem 1:** SVGs nicht gerendert — Button-Texte zeigen `HoD_Check`/`HoD_Cancel` statt Icons
+- **Problem 2:** DPAD winzig nach Geometrie-Fix
+- **Problem 3:** Menue-Icons nur nach Menue-Wechsel korrekt, nicht bei App-Start
+
+### Hotfixes (3 Bugs)
+
+**Fix 1: SVG-Rendering (iconset.json name-mismatch)**
+- Ursache: `iconset.json` `name`-Felder waren `"HoD_Run"` etc., aber `iconmappings.json`-Values sind `"hod_run"` etc. Die `SvgIconManager`-Pre-load-Schleife sucht `entries[svgName]` wo `svgName` aus den Mappings kommt → `entries["hod_run"]` fand nichts weil Entry unter `"HoD_Run"` gespeichert war
+- Fix: `iconset.json` `name`-Felder auf lowercase-Namen geaendert (`"HoD_Run"` → `"hod_run"`), passend zu Mapping-Values
+- Pre-load-Log jetzt: `Pre-load SVG hod_run.svg: OK` etc. (5/5 OK)
+
+**Fix 2: DPAD-Skalierung (SQUARE-Geometrie)**
+- Ursache: `computeOuterShapeBounds()` fuer SQUARE nutzte `buttonHeight = minOf(h, w / 1.8f)`, was bei quadratischem View `h / 1.8` ergibt — viel kleiner als die View
+- Fix: SQUARE-Buttons nutzen jetzt `side = minOf(w, h)` (volle View-Dimension) statt `buttonHeight`
+
+**Fix 3: Menue-Icons bei App-Start**
+- Ursache: `g_menuOpenedFromGame` war nur im Level-Loop gesetzt, nie im initialen Hauptmenue. Polling sah `false` und zeigte In-Game-Icons
+- Fix: `g_menuOpenedFromGame = true` vor dem `do`-Block in `SDL_main` gesetzt, damit das Hauptmenue sofort als Menue-Zustand erkannt wird
+
+### Geraetetest (nach Hotfixes)
+- SVGs werden korrekt gerendert (HoD_Run, HoD_Jump, HoD_Shoot) ✅
+- Im Hauptmenue: Check-Icon (Jump), Cancel-Icon (Shoot), Run ausgeblendet ✅ (Fix 3)
+- DPAD wieder normal gross ✅ (Fix 2)
+- Menue-Wechsel funktioniert ✅
+- 5-Button-Default (kein btn_shoot_run) ✅
+- Visuell top ✅
+
+### Overlay Icon Manual aktualisiert
+- Bug #14: SVG-Name-Mismatch iconset.json vs iconmappings.json
+- Bug #15: Menue-Icons nicht bei App-Start (native Flag)
+- Bug #16: DPAD zu klein nach Geometrie-Fix (SQUARE-Button-Geometrie)
+
+### Files geaendert (3)
+- `res/raw/iconset.json` — name-Felder lowercase
+- `touch/TouchOverlayButtonView.kt` — SQUARE-Geometrie-Fix
+- `android_main.cpp` — `g_menuOpenedFromGame = true` vor Hauptmenue
+
+### Alle 5 SVG-Phasen abgeschlossen. Projekt bereit fuer naechste Aufgaben.
+
+---
+
+## 2026-06-04: Button-Groessen-Anpassung + Cancel-Button im Hauptmenue
+
+### Default-Button-Groessen
+- Menu: 0.103 → **0.18**
+- Run/Jump/Shoot: 0.180 → **0.26**
+- DPAD: 0.430 → **0.500**
+- Size-SeekBar Max: 0.450 → **0.600**
+
+### Cancel-Button im Hauptmenue
+- Problem: Im Hauptmenue fuehrte Cancel (SHIFT) nicht zurueck ins Spiel, nur der Menue-Button oder "Play" funktionierten
+- Fix: In `menu.cpp handleTitleScreen()`: Wenn `Android_isMenuOpenedFromGame()` und `SYS_INP_SHOOT` released → zurueck ins Spiel (wie Menue-Button)
+- In den Optionen bleibt SHIFT weiterhin der Zurueck-Befehl innerhalb des Optionsmenues
+- Nur aktiv wenn aus laufendem Spiel heraus ins Hauptmenue gewechselt wurde (nicht beim initialen App-Start)
+
+### Files geaendert (4)
+- `touch/TouchButtonModels.kt` — Default-Groessen
+- `touch/TouchOverlayEditDialog.kt` — Size-SeekBar bis 0.600
+- `menu.cpp` — SHIFT=Zurueck im Hauptmenue
+
+### SVG-Phasen alle abgeschlossen. Herz der Finsternis Android Port v0.1.0 ist fertig.
+
+---

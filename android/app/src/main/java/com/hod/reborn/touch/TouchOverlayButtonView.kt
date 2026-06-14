@@ -1,4 +1,4 @@
-package com.heartofdarkness.reborn.touch
+package com.hod.reborn.touch
 
 import android.content.Context
 import android.graphics.Canvas
@@ -80,6 +80,7 @@ class TouchOverlayButtonView(
         when (action) {
             MotionEvent.ACTION_DOWN -> {
                 if (activePointerId != -1) return false
+                if (!isPointInsideShape(event.x, event.y)) return false
                 activePointerId = event.getPointerId(0)
                 setPressedState(true)
                 initialTouchTime = System.currentTimeMillis()
@@ -131,7 +132,9 @@ class TouchOverlayButtonView(
             MotionEvent.ACTION_POINTER_DOWN -> {
                 if (activePointerId != -1) return false
                 val index = event.actionIndex
-                activePointerId = event.getPointerId(index)
+                val pi = event.getPointerId(index)
+                if (!isPointInsideShape(event.getX(index), event.getY(index))) return false
+                activePointerId = pi
                 setPressedState(true)
                 initialTouchTime = System.currentTimeMillis()
                 downX = getRawX(event, index); downY = getRawY(event, index)
@@ -246,7 +249,7 @@ class TouchOverlayButtonView(
 
         val now = System.currentTimeMillis()
         if (lastHorizontalDpadTapDirection == direction && now - lastHorizontalDpadTapTime <= DPAD_DOUBLE_TAP_RUN_MS) {
-            dispatcher.performKeyName("SHIFT", true)
+            dispatcher.performKeyName("CTRL", true)
             dpadRunActive = true
         }
         lastHorizontalDpadTapDirection = direction
@@ -255,7 +258,7 @@ class TouchOverlayButtonView(
 
     private fun releaseDpadRun() {
         if (dpadRunActive) {
-            dispatcher.performKeyName("SHIFT", false)
+            dispatcher.performKeyName("CTRL", false)
             dpadRunActive = false
         }
     }
@@ -274,16 +277,10 @@ class TouchOverlayButtonView(
 
     override fun onDraw(canvas: Canvas) {
         val fillPaint = if (isPressed) activePaint else backgroundPaint
-        rect.set(1f, 1f, width - 1f, height - 1f)
-        when (buttonConfig.shape.lowercase()) {
-            BUTTON_SHAPE_SQUARE -> canvas.drawRoundRect(rect, cornerRadius(0.14f), cornerRadius(0.14f), fillPaint)
-            BUTTON_SHAPE_RECTANGLE -> canvas.drawRoundRect(rect, cornerRadius(0.18f), cornerRadius(0.18f), fillPaint)
-            else -> canvas.drawOval(rect, fillPaint)
-        }
-        when (buttonConfig.shape.lowercase()) {
-            BUTTON_SHAPE_SQUARE -> canvas.drawRoundRect(rect, cornerRadius(0.14f), cornerRadius(0.14f), borderPaint)
-            BUTTON_SHAPE_RECTANGLE -> canvas.drawRoundRect(rect, cornerRadius(0.18f), cornerRadius(0.18f), borderPaint)
-            else -> canvas.drawOval(rect, borderPaint)
+        val isDpad = buttonConfig.icon == "dpad_map"
+        if (!isDpad) {
+            drawShape(canvas, fillPaint)
+            drawShape(canvas, borderPaint)
         }
         val icon = buttonConfig.icon
         if (icon != null) drawIcon(canvas, icon)
@@ -302,20 +299,118 @@ class TouchOverlayButtonView(
 
     private fun cornerRadius(factor: Float): Float = minOf(width, height) * factor
 
+    private fun computeOuterShapeBounds(): RectF {
+        val w = width.toFloat()
+        val h = height.toFloat()
+        val buttonHeight = minOf(h, w / 1.8f)
+        return when (buttonConfig.shape.lowercase()) {
+            BUTTON_SHAPE_SQUARE -> {
+                val side = minOf(w, h)
+                RectF(w / 2 - side / 2, h / 2 - side / 2, w / 2 + side / 2, h / 2 + side / 2)
+            }
+            BUTTON_SHAPE_RECTANGLE -> {
+                val rh = buttonHeight
+                val rw = minOf(w * 0.9f, rh * 1.8f)
+                RectF(w / 2 - rw / 2, h / 2 - rh / 2, w / 2 + rw / 2, h / 2 + rh / 2)
+            }
+            else -> {
+                val radius = minOf(h / 2f, buttonHeight / 2f)
+                RectF(w / 2 - radius, h / 2 - radius, w / 2 + radius, h / 2 + radius)
+            }
+        }
+    }
+
+    private fun computeIconShapeBounds(): RectF {
+        val w = width.toFloat()
+        val h = height.toFloat()
+        val buttonHeight = minOf(h, w / 1.8f)
+        return when (buttonConfig.shape.lowercase()) {
+            BUTTON_SHAPE_CIRCLE -> {
+                val r = buttonHeight / 2f * 0.85f
+                RectF(w / 2 - r, h / 2 - r, w / 2 + r, h / 2 + r)
+            }
+            else -> computeOuterShapeBounds()
+        }
+    }
+
+    fun isPointInsideShape(localX: Float, localY: Float): Boolean {
+        val bounds = computeOuterShapeBounds()
+        if (localX < bounds.left || localX > bounds.right || localY < bounds.top || localY > bounds.bottom) return false
+        return when (buttonConfig.shape.lowercase()) {
+            BUTTON_SHAPE_CIRCLE -> {
+                val cx = bounds.centerX(); val cy = bounds.centerY()
+                val radius = bounds.width() / 2f
+                val dx = localX - cx; val dy = localY - cy
+                dx * dx + dy * dy <= radius * radius
+            }
+            BUTTON_SHAPE_SQUARE -> isInsideRoundRect(bounds, localX, localY, cornerRadius(0.14f))
+            BUTTON_SHAPE_RECTANGLE -> isInsideRoundRect(bounds, localX, localY, cornerRadius(0.18f))
+            else -> true
+        }
+    }
+
+    private fun isInsideRoundRect(bounds: RectF, localX: Float, localY: Float, cr: Float): Boolean {
+        if (localX >= bounds.left + cr && localX <= bounds.right - cr) return true
+        if (localY >= bounds.top + cr && localY <= bounds.bottom - cr) return true
+        val corners = listOf(
+            bounds.left + cr to bounds.top + cr,
+            bounds.right - cr to bounds.top + cr,
+            bounds.left + cr to bounds.bottom - cr,
+            bounds.right - cr to bounds.bottom - cr
+        )
+        for ((cx, cy) in corners) {
+            val dx = localX - cx; val dy = localY - cy
+            if (dx * dx + dy * dy <= cr * cr) return true
+        }
+        return false
+    }
+
+    private fun drawShape(canvas: Canvas, paint: Paint) {
+        val bounds = computeOuterShapeBounds()
+        when (buttonConfig.shape.lowercase()) {
+            BUTTON_SHAPE_SQUARE -> canvas.drawRoundRect(bounds, cornerRadius(0.14f), cornerRadius(0.14f), paint)
+            BUTTON_SHAPE_RECTANGLE -> canvas.drawRoundRect(bounds, cornerRadius(0.18f), cornerRadius(0.18f), paint)
+            else -> canvas.drawOval(bounds, paint)
+        }
+    }
+
+    private fun iconClipPath(bounds: RectF): Path =
+        Path().apply {
+            when (buttonConfig.shape.lowercase()) {
+                BUTTON_SHAPE_SQUARE -> addRect(bounds, Path.Direction.CW)
+                BUTTON_SHAPE_RECTANGLE -> addRoundRect(
+                    bounds, cornerRadius(0.18f), cornerRadius(0.18f), Path.Direction.CW)
+                else -> addOval(bounds, Path.Direction.CW)
+            }
+        }
+
     private fun drawCenteredText(canvas: Canvas, text: String) {
-        textPaint.textSize = minOf(height * 0.42f, width * 0.34f).coerceAtLeast(9f * resources.displayMetrics.density)
+        val outerBounds = computeOuterShapeBounds()
+        val shapeDim = minOf(outerBounds.width(), outerBounds.height())
+        textPaint.textSize = shapeDim * 0.42f
         while (textPaint.textSize > 8f * resources.displayMetrics.density &&
-            (textPaint.measureText(text) > width * 0.78f || textPaint.fontSpacing > height * 0.52f))
+            (textPaint.measureText(text) > shapeDim * 0.78f || textPaint.fontSpacing > shapeDim * 0.52f))
             textPaint.textSize -= resources.displayMetrics.density
         canvas.drawText(text, width / 2f, height / 2f - (textPaint.descent() + textPaint.ascent()) / 2f, textPaint)
     }
 
     private fun drawIcon(canvas: Canvas, icon: String) {
-        iconPaint.strokeWidth = minOf(width, height) * 0.07f
-        val cx = width / 2f; val cy = height / 2f; val s = minOf(width, height) * 0.28f
+        val shapeBounds = computeIconShapeBounds()
+        canvas.save()
+        canvas.clipPath(iconClipPath(computeOuterShapeBounds()))
+        if (SvgIconManager.renderIcon(canvas, context, icon, shapeBounds, iconFillPaint,
+                iconFillOverride = buttonConfig.iconFill)) {
+            canvas.restore()
+            return
+        }
+        canvas.restore()
+        val outerBounds = computeOuterShapeBounds()
+        val shapeDim = minOf(outerBounds.width(), outerBounds.height())
+        iconPaint.strokeWidth = shapeDim * 0.07f
+        val cx = width / 2f; val cy = height / 2f; val s = shapeDim * 0.28f
         when (icon) {
             "dpad_map" -> drawDpad(canvas, cx, cy, s)
-            "jump" -> drawJump(canvas, cx, cy, s)
+            "jump", "HoD_Jump" -> drawJump(canvas, cx, cy, s)
             "arrow_up" -> drawArrow(canvas, cx, cy + s, cx, cy - s)
             "arrow_down" -> drawArrow(canvas, cx, cy - s, cx, cy + s)
             "arrow_left" -> drawArrow(canvas, cx + s, cy, cx - s, cy)
@@ -323,8 +418,8 @@ class TouchOverlayButtonView(
             "mouse_left" -> drawMouse(canvas, cx, cy, s, -1)
             "mouse_right" -> drawMouse(canvas, cx, cy, s, 1)
             "use", "enter" -> drawUse(canvas, cx, cy, s)
-            "weapon", "space" -> drawWeapon(canvas, cx, cy, s)
-            "run", "run_toggle" -> drawRun(canvas, cx, cy, s)
+            "weapon", "space", "HoD_Shoot" -> drawWeapon(canvas, cx, cy, s)
+            "run", "run_toggle", "HoD_Run" -> drawRun(canvas, cx, cy, s)
             "inventory", "tab" -> drawInventory(canvas, cx, cy, s)
             "status", "info" -> drawStatus(canvas, cx, cy, s)
             "menu", "escape" -> drawMenu(canvas, cx, cy, s)

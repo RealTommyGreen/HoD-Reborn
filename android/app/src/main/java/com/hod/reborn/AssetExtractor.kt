@@ -1,4 +1,4 @@
-package com.heartofdarkness.reborn
+package com.hod.reborn
 
 import android.content.Context
 import android.util.Log

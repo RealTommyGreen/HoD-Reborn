@@ -1,4 +1,4 @@
-package com.heartofdarkness.reborn.touch
+package com.hod.reborn.touch
 
 import android.app.AlertDialog
 import android.content.Context
@@ -9,21 +9,21 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
-import com.heartofdarkness.reborn.ControllerDeviceDetector
-import com.heartofdarkness.reborn.HodActivity
+import com.hod.reborn.HodActivity
 
 class TouchOverlaySettingsDialog(
     private val context: Context,
     private val config: TouchOverlayConfig,
     private val controllerEnabled: Boolean = false,
-    private val controllerConfig: ControllerConfig? = null,
+    @Suppress("UNUSED_PARAMETER") private val controllerConfig: ControllerConfig? = null,
     private val onConfigChanged: (TouchOverlayConfig) -> Unit,
     private val onResetAll: () -> Unit,
-    private val onControllerConfigChanged: ((ControllerConfig) -> Unit)? = null,
-    private val onOpenControllerMapping: (() -> Unit)? = null
+    @Suppress("UNUSED_PARAMETER") private val onControllerConfigChanged: ((ControllerConfig) -> Unit)? = null,
+    @Suppress("UNUSED_PARAMETER") private val onOpenControllerMapping: (() -> Unit)? = null
 ) {
     fun show() {
         var currentConfig = config
@@ -40,20 +40,12 @@ class TouchOverlaySettingsDialog(
 
         container.addView(title("Touch Overlay Settings"))
 
-        // --- Controller ---
+        // --- Controller (v1: native mapping is hardcoded, UI disabled) ---
         container.addView(sectionLabel("Controller"))
-        val controllerButton = dialogButton(
-            "Controller Mapping",
-            0xFF1A3A24.toInt(),
-            0xFF4A9A5A.toInt()
-        ) {
-            if (ControllerDeviceDetector.isControllerConnected() && onOpenControllerMapping != null) {
-                onOpenControllerMapping()
-            } else {
-                Toast.makeText(context, "No controller detected", Toast.LENGTH_SHORT).show()
-            }
-        }
-        container.addView(controllerButton)
+        container.addView(TextView(context).apply {
+            text = "Gamepad uses built-in HoD mapping (A=Run, B=Jump, X=Shoot, Y=Shoot+Run)."
+            textSize = 12f; setTextColor(TEXT_MUTED); setPadding(0, 0, 0, 8.dp)
+        })
 
         // --- D-Pad ---
         container.addView(separator())
@@ -63,6 +55,14 @@ class TouchOverlaySettingsDialog(
         }
         container.addView(sectionLabel("D-Pad"))
         container.addView(dpadRunCheckBox)
+
+        // --- Video ---
+        container.addView(separator())
+        container.addView(sectionLabel("Video"))
+        container.addView(videoFilterGroup(currentConfig.videoFilter) { filter ->
+            currentConfig = currentConfig.copy(videoFilter = filter)
+            onConfigChanged(currentConfig)
+        })
 
         // --- Cheats ---
         container.addView(separator())
@@ -95,9 +95,7 @@ class TouchOverlaySettingsDialog(
 
         val dialog = AlertDialog.Builder(context)
             .setView(scrollView)
-            .setPositiveButton("Close") { _, _ ->
-                onConfigChanged(currentConfig)
-            }
+            .setPositiveButton("Close", null)
             .create()
 
         dialog.setOnShowListener {
@@ -126,6 +124,33 @@ class TouchOverlaySettingsDialog(
             isChecked = checked
             setOnCheckedChangeListener { _, isChecked -> onChange(isChecked) }
         }
+
+    private fun videoFilterGroup(selectedFilter: String, onChange: (String) -> Unit): RadioGroup {
+        val options = listOf(
+            VIDEO_FILTER_NEAREST to "Original Pixels",
+            VIDEO_FILTER_LINEAR to "Soft Linear",
+            VIDEO_FILTER_XBR to "xBR Smooth"
+        )
+        return RadioGroup(context).apply {
+            orientation = RadioGroup.VERTICAL
+            options.forEachIndexed { index, (value, label) ->
+                val id = View.generateViewId()
+                addView(RadioButton(context).apply {
+                    this.id = id
+                    text = label
+                    textSize = 14f
+                    setTextColor(TEXT)
+                    buttonTintList = tint(ACCENT)
+                    tag = value
+                    isChecked = value == selectedFilter || (index == 0 && selectedFilter !in options.map { it.first })
+                })
+            }
+            setOnCheckedChangeListener { group, checkedId ->
+                val value = group.findViewById<RadioButton>(checkedId)?.tag as? String ?: VIDEO_FILTER_NEAREST
+                onChange(value)
+            }
+        }
+    }
 
     private fun dialogButton(text: String, fill: Int, stroke: Int, onClick: () -> Unit): TextView {
         return TextView(context).apply {
@@ -162,6 +187,7 @@ class TouchOverlaySettingsDialog(
     companion object {
         private const val TEXT = 0xFFFFFFFF.toInt()
         private const val ACCENT = 0xFFFFC17A.toInt()
+        private const val TEXT_MUTED = 0xFFB5C0CC.toInt()
         private const val SURFACE_STROKE = 0x667D8DA0
     }
 }

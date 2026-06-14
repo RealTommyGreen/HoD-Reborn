@@ -1,4 +1,4 @@
-package com.heartofdarkness.reborn.touch
+package com.hod.reborn.touch
 
 data class TouchButtonPreset(
     val id: String,
@@ -15,19 +15,21 @@ val TOUCH_BUTTON_PRESETS: List<TouchButtonPreset> = listOf(
     // D-Pad
     TouchButtonPreset("dpad", "D-Pad", "dpad_map",
         TouchButtonAction(type = "dpad", mode = "hold"), "Movement"),
-    keyPreset("jump", "Jump", "jump", "UP", "Movement", mode = "hold"),
+    keyPreset("up", "Up", "arrow_up", "UP", "Movement", mode = "hold"),
 
     // Mouse
     mousePreset("mouse_left", "Left Click", "mouse_left", "left"),
     mousePreset("mouse_right", "Right Click", "mouse_right", "right"),
 
     // HoD keys
-    keyPreset("use", "Use", "use", "ENTER", "Actions"),
-    keyPreset("weapon", "Shoot", "weapon", "SPACE", "Actions"),
-    keyPreset("run", "Run/Holster", "run", "SHIFT", "Actions", mode = "hold"),
+    keyPreset("jump", "Jump", "HoD_Jump", "ENTER", "Actions", mode = "hold"),
+    keyPreset("weapon", "Shoot", "HoD_Shoot", "SHIFT", "Actions", mode = "hold"),
+    keyPreset("shoot_run", "Shoot+Run", "HoD_Shoot", "SPACE", "Actions", mode = "hold"),
+    keyPreset("run", "Run", "HoD_Run", "CTRL", "Actions", mode = "hold"),
     keyPreset("inventory", "Inventory", "inventory", "TAB", "UI"),
     keyPreset("status", "Status", "status", "CTRL", "UI", mode = "hold"),
-    keyPreset("menu", "Menu", "menu", "ESCAPE", "UI"),
+    TouchButtonPreset("menu", "Menu", "menu",
+        TouchButtonAction(type = "native_menu", mode = "tap"), "UI"),
     keyPreset("save", "Save", "quick_save", "S", "UI"),
     keyPreset("load", "Load", "quick_load", "L", "UI"),
     keyPreset("slot_next", "Slot +", "arrow_right", "PAGE_UP", "UI"),
@@ -71,6 +73,7 @@ private fun actionMatches(expected: TouchButtonAction, actual: TouchButtonAction
         "key_combo" -> expected.keyCodes == actual.keyCodes
                 && expected.keyNames.map { it.uppercase() } == actual.keyNames.map { it.uppercase() }
         "dpad" -> true
+        "native_menu" -> true
         else -> false
     }
 }

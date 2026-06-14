@@ -1,4 +1,4 @@
-package com.heartofdarkness.reborn
+package com.hod.reborn
 
 import android.app.Activity
 import android.content.Intent
@@ -94,7 +94,7 @@ class HodLauncherActivity : Activity() {
         }
 
         val title = TextView(this).apply {
-            text = "Heart of Darkness"
+            text = "HoD Reborn"
             textSize = 28f
             setTextColor(0xFFFFFFFF.toInt())
             gravity = Gravity.CENTER
@@ -103,7 +103,7 @@ class HodLauncherActivity : Activity() {
         content.addView(title)
 
         val subtitle = TextView(this).apply {
-            text = "To play, select your Heart of Darkness game folder.\nThis only needs to be done once.\nThe folder must contain setup.dat, *_hod.lvl, *_hod.sss,\n*_hod.mst, and hod.paf (or hod_demo.paf)."
+            text = "To play, select your HoD Reborn game folder.\nThis only needs to be done once.\nThe folder must contain setup.dat, *_hod.lvl, *_hod.sss,\nand *_hod.mst. Cutscene PAF files are optional."
             textSize = 14f
             setTextColor(0xFFAAAAAA.toInt())
             gravity = Gravity.CENTER

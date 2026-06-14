@@ -7,11 +7,53 @@
 #include "fileio.h"
 #include "level.h"
 #include "lzw.h"
+#include "menu.h"
 #include "paf.h"
 #include "screenshot.h"
 #include "system.h"
 #include "util.h"
 #include "video.h"
+
+#ifdef __ANDROID__
+extern "C" bool Android_consumeMenuToggleRequest();
+extern "C" void Android_setMenuOpenedFromGame(bool opened);
+
+static void clearAndroidMenuInputState() {
+	g_system->inp.mask = 0;
+	g_system->inp.prevMask = 0;
+	g_system->pad.mask = 0;
+	g_system->pad.prevMask = 0;
+}
+
+static void restoreAndroidLevelAudio(Game *g) {
+	g->_mix._lock(1);
+	g->clearSoundObjects();
+	if (g->_res->_isPsx) {
+		g->_res->_lvlFile->seek(g->_res->_lvlSssOffset, SEEK_SET);
+		g->_res->loadSssData(g->_res->_lvlFile, g->_res->_lvlSssOffset);
+	} else if (g->_res->_sssFile) {
+		g->_res->_sssFile->seek(0, SEEK_SET);
+		g->_res->loadSssData(g->_res->_sssFile);
+	}
+	g->clearSoundObjects();
+	g->_mix._lock(0);
+	g->setupBackgroundBitmap();
+}
+
+static void runAndroidInGameMenu(Game *g) {
+	Android_setMenuOpenedFromGame(true);
+	clearAndroidMenuInputState();
+	Menu menu(g, g->_paf, g->_res, g->_video);
+	menu.mainLoop();
+	Android_setMenuOpenedFromGame(false);
+	clearAndroidMenuInputState();
+	restoreAndroidLevelAudio(g);
+	if (!g->_res->_isPsx) {
+		g->_video->updateGamePalette(g->_video->_displayPaletteBuffer);
+	}
+	g->_video->_paletteChanged = false;
+}
+#endif
 
 // starting level cutscene number
 static const uint8_t _cutscenes[] = { 0, 2, 4, 5, 6, 8, 10, 14, 19 };
@@ -41,6 +83,7 @@ Game::Game(const char *dataPath, const char *savePath, uint32_t cheats)
 	_actionKeyMask = 0;
 
 	_currentScreen = 0;
+	_returnToMenu = false;
 
 	_lvlObjectsList0 = 0;
 	_lvlObjectsList1 = 0;
@@ -1916,6 +1959,7 @@ static void gamePafCallback(void *userdata) {
 }
 
 void Game::mainLoop(int level, int checkpoint, bool levelChanged) {
+	_returnToMenu = false;
 	if (_playDemo && _res->loadHodDem()) {
 		_rnd._rndSeed = _res->_dem.randSeed;
 		level = _res->_dem.level;
@@ -2593,10 +2637,19 @@ void Game::levelMainLoop() {
 	}
 	_rnd.update();
 	g_system->processEvents();
+#ifdef __ANDROID__
+	if (Android_consumeMenuToggleRequest()) {
+		runAndroidInGameMenu(this);
+	} else
+#endif
 	if (g_system->inp.keyPressed(SYS_INP_ESC)) {
+#ifdef __ANDROID__
+		runAndroidInGameMenu(this);
+#else
 		if (displayHintScreen(-1, 0)) { // pause/exit screen
 			g_system->inp.quit = true;
 		}
+#endif
 	} else {
 		// displayHintScreen(1, 0);
 		_video->updateScreen();

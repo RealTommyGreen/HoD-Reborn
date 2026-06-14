@@ -1,4 +1,4 @@
-package com.heartofdarkness.reborn
+package com.hod.reborn
 
 import android.content.Context
 import android.net.Uri
@@ -29,7 +29,8 @@ class SafImporter(private val context: Context) {
         val PAF_FILES = listOf(
             "hod.paf",
             "hod_demo.paf",
-            "hod_demo2.paf"
+            "hod_demo2.paf",
+            "hod_oem.paf"
         )
     }
 
@@ -56,9 +57,20 @@ class SafImporter(private val context: Context) {
             if (json.optString("validation_status") != "ok") return false
 
             val targetDir = getTargetDir()
+            val files = collectLocalFileNames(targetDir)
+            if (files.isEmpty()) return false
+
+            // Check required file
             for (file in REQUIRED_FILES) {
-                if (!File(targetDir, file).isFile) return false
+                if (file !in files && file.lowercase() !in files.map { it.lowercase() }) return false
             }
+            // Check pattern file: at least one *_hod.lvl
+            if (files.none { it.matches(Regex(".*_hod\\.lvl", RegexOption.IGNORE_CASE)) }) return false
+            // Check pattern file: at least one *_hod.sss
+            if (files.none { it.matches(Regex(".*_hod\\.sss", RegexOption.IGNORE_CASE)) }) return false
+            // Check pattern file: at least one *_hod.mst
+            if (files.none { it.matches(Regex(".*_hod\\.mst", RegexOption.IGNORE_CASE)) }) return false
+
             return true
         } catch (e: Exception) {
             Log.w(TAG, "Manifest read failed: ${e.message}")
@@ -75,8 +87,8 @@ class SafImporter(private val context: Context) {
             return ValidationResult(false, "Selected folder is empty", emptyList())
         }
 
-        val childNames = children.map { it.name.orEmpty() }.toSet()
-        val childNamesLower = children.map { it.name?.lowercase() }.toSet()
+        val childNames = collectDocumentFileNames(documentFile).toSet()
+        val childNamesLower = childNames.map { it.lowercase() }.toSet()
 
         val missing = mutableListOf<String>()
 
@@ -98,12 +110,6 @@ class SafImporter(private val context: Context) {
         // Check pattern files: at least one matching *_hod.mst
         val hasMst = childNames.any { it.matches(Regex(".*_hod\\.mst", RegexOption.IGNORE_CASE)) }
         if (!hasMst) missing.add(PATTERN_FILES[2])
-
-        // Check PAF files: at least one matching
-        val hasPaf = childNames.any { name ->
-            PAF_FILES.any { name.equals(it, ignoreCase = true) }
-        }
-        if (!hasPaf) missing.add(PAF_FILES.joinToString(" or "))
 
         if (missing.isNotEmpty()) {
             return ValidationResult(false, "Missing required files: ${missing.joinToString(", ")}", missing)
@@ -192,6 +198,26 @@ class SafImporter(private val context: Context) {
                 0
             }
         }
+    }
+
+    private fun collectDocumentFileNames(root: DocumentFile): List<String> {
+        val result = mutableListOf<String>()
+        for (child in root.listFiles()) {
+            if (child.isDirectory) {
+                result += collectDocumentFileNames(child)
+            } else {
+                child.name?.let { result += it }
+            }
+        }
+        return result
+    }
+
+    private fun collectLocalFileNames(root: File): Set<String> {
+        if (!root.isDirectory) return emptySet()
+        return root.walkTopDown()
+            .filter { it.isFile }
+            .map { it.name }
+            .toSet()
     }
 
     data class ValidationResult(

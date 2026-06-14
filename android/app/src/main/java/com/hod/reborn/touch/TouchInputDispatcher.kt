@@ -1,8 +1,9 @@
-package com.heartofdarkness.reborn.touch
+package com.hod.reborn.touch
 
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
+import com.hod.reborn.HodActivity
 import org.libsdl.app.SDLActivity
 
 class TouchInputDispatcher {
@@ -23,9 +24,10 @@ class TouchInputDispatcher {
             "key_combo" -> dispatchKeyComboAction(action, pressed)
             "text" -> dispatchTextAction(action, pressed)
             "dpad" -> Unit
+            "native_menu" -> if (pressed) HodActivity.nativeToggleGameMenu()
             else -> Log.w(TAG, "Unknown action type: ${action.type}")
         }
-    }
+
     }
 
     fun releaseAll() {
@@ -276,4 +278,4 @@ class TouchInputDispatcher {
             }
         }
     }
-}
+}  // TouchInputDispatcher

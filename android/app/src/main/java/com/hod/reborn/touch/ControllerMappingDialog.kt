@@ -1,4 +1,4 @@
-package com.heartofdarkness.reborn.touch
+package com.hod.reborn.touch
 
 import android.app.AlertDialog
 import android.content.Context
@@ -11,7 +11,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import com.heartofdarkness.reborn.ControllerDeviceDetector
+import com.hod.reborn.ControllerDeviceDetector
 
 class ControllerMappingDialog(
     private val context: Context,

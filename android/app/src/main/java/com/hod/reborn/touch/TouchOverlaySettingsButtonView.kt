@@ -1,4 +1,4 @@
-package com.heartofdarkness.reborn.touch
+package com.hod.reborn.touch
 
 import android.content.Context
 import android.graphics.Canvas
@@ -22,6 +22,7 @@ class TouchOverlaySettingsButtonView(context: Context) : View(context) {
             setColor(0xAA111820.toInt())
             setStroke(1.dpToPx(), 0x66FFFFFF)
         }
+        alpha = 0.34f
     }
 
     override fun onDraw(canvas: Canvas) {

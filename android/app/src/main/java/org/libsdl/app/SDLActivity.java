@@ -710,7 +710,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                     // FIXME: Why aren't we enabling sensor input at start?
 
                     mSDLThread = new Thread(new SDLMain(), "SDLThread");
-                    mSurface.enableSensor(Sensor.TYPE_ACCELEROMETER, true);
+                    mSurface.enableSensor(Sensor.TYPE_ACCELEROMETER, false);
                     mSDLThread.start();
 
                     // No nativeResume(), don't signal Android_ResumeSem
@@ -970,7 +970,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
         /* If set, hint "explicitly controls which UI orientations are allowed". */
         if (hint.contains("LandscapeRight") && hint.contains("LandscapeLeft")) {
-            orientation_landscape = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE;
+            orientation_landscape = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
         } else if (hint.contains("LandscapeLeft")) {
             orientation_landscape = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
         } else if (hint.contains("LandscapeRight")) {
@@ -999,7 +999,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                 req = ActivityInfo.SCREEN_ORIENTATION_FULL_USER;
             } else {
                 /* Fixed window and nothing specified. Get orientation from w/h of created window */
-                req = (w > h ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
+                req = (w > h ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
             }
         } else {
             /* At least one orientation is allowed */
@@ -2114,4 +2114,3 @@ class SDLClipboardHandler implements
         SDLActivity.onNativeClipboardChanged();
     }
 }
-

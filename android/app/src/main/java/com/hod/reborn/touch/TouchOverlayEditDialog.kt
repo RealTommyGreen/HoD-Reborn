@@ -1,4 +1,4 @@
-package com.heartofdarkness.reborn.touch
+package com.hod.reborn.touch
 
 import android.app.AlertDialog
 import android.content.Context
@@ -28,7 +28,7 @@ class TouchOverlayEditDialog(
         Option(BUTTON_SHAPE_SQUARE, "Square"),
         Option(BUTTON_SHAPE_RECTANGLE, "Rectangle")
     )
-    private val sizeValues = floatArrayOf(0.030f, 0.040f, 0.055f, 0.065f, 0.075f, 0.090f, 0.105f, 0.120f, 0.140f, 0.160f, 0.180f, 0.220f, 0.260f, 0.300f, 0.350f, 0.400f, 0.450f)
+    private val sizeValues = floatArrayOf(0.030f, 0.040f, 0.055f, 0.065f, 0.075f, 0.090f, 0.105f, 0.120f, 0.140f, 0.160f, 0.180f, 0.220f, 0.260f, 0.300f, 0.350f, 0.400f, 0.450f, 0.500f, 0.550f, 0.600f)
     private val alphaValues = floatArrayOf(0.15f, 0.25f, 0.35f, 0.45f, 0.55f, 0.65f, 0.75f, 0.85f, 1.00f)
 
     fun show() {
