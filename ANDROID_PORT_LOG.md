@@ -742,3 +742,42 @@
 - `ANDROID_PORT_LOG.md` — Dieser Eintrag
 
 ---
+
+## 2026-06-14: Version 1.0.0
+
+### Version Bump: 0.2.1 → 1.0.0
+- `build.gradle.kts`: versionCode 1→2, versionName "0.1.0"→"1.0.0"
+- `CHANGELOG.md`: v0.2.1-Eintrag zu v1.0.0 hochgestuft, alle Versionen konsolidiert
+
+### Projektstatus
+- Erste stabile Release-Version (v1.0.0)
+- Signierte Release-APK vorhanden (HoD-Reborn-2026-06-14.apk)
+- Projektlog und Changelog vollstaendig
+- Bereit fuer GitHub
+
+### Build & Upload
+- `gradlew assembleRelease` → BUILD SUCCESSFUL (2m 23s)
+- APK: `app-release.apk` (12.6 MB), 3 ABIs (arm64-v8a, armeabi-v7a, x86_64), signed
+- GDrive: `HoD-Reborn-v1.0.0.apk`
+- Download: https://drive.google.com/file/d/1i1nOgttOCstF4ob5fTDkemYxnE8QMKmv/view?usp=drivesdk
+
+### Files geaendert (4)
+- `android/app/build.gradle.kts` — versionCode 2, versionName "1.0.0"
+- `CHANGELOG.md` — v0.2.1→v1.0.0
+- `ANDROID_PORT_LOG.md` — Dieser Eintrag
+- Release-APK gebaut und auf GDrive hochgeladen
+
+---
+
+## 2026-06-14: README.md erstellt
+
+- Projekt-README fuer GitHub geschrieben
+- Dank an Gregory Montoir und Amazing Studio
+- Enthaelt: Features, Download-Link, Game-Data-Setup, Build-Anleitung, Architektur-Uebersicht, Credits, License
+- GitHub-spezifische Formatierung (Callouts, Tabellen, Code-Blocks)
+- Loest README.txt (Original-hode) ab, wird als README.md automatisch von GitHub gerendert
+
+### Files
+- `README.md` (NEU) — Projekt-README
+
+---
