@@ -23,7 +23,7 @@ Built on [hode](https://github.com/cyxx/hode) 0.2.9f — the incredible reverse-
 
 ## Download
 
-**Latest APK:** [HoD-Reborn-v1.0.0.apk](https://drive.google.com/uc?export=download&id=1zqJzOyDKgq3rETO4khkpfA1HvBn0i2g9) (13 MB, arm64-v8a + armeabi-v7a + x86_64)
+**Latest APK:** [HoDRebornRelease1.0.apk](https://github.com/RealTommyGreen/HoD-Reborn/releases/download/v1.0.0/HoDRebornRelease1.0.apk) (13 MB, arm64-v8a + armeabi-v7a + x86_64)
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
